@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0f172a">
+    <title>CoinLyte YouTube Command Centre</title>
+    <link rel="preconnect" href="https://i.ytimg.com">
+    <link rel="stylesheet" href="assets/styles.css?v=20260517-11">
+  </head>
+  <body>
+    <div id="gate" class="gate is-hidden">
+      <div class="gate-panel">
+        <div class="brand-mark">CL</div>
+        <p class="eyebrow">CoinLyte OS</p>
+        <h1>YouTube Command Centre</h1>
+        <p class="gate-copy">Owner dashboard for channel analytics, content pipeline, team links, sponsorships, and refresh operations.</p>
+        <form id="login-form" class="login-form">
+          <label for="access-code">Access code</label>
+          <div class="login-row">
+            <input id="access-code" type="password" autocomplete="current-password" placeholder="Local preview passphrase">
+            <button class="primary-btn" type="submit">Unlock</button>
+          </div>
+          <p id="login-error" class="form-error" role="alert">Production access is enforced by Vercel middleware and the OWNER_ACCESS_CODE secret.</p>
+        </form>
+      </div>
+    </div>
+
+    <div id="app" class="app-shell">
+      <header class="app-header">
+        <div class="side-brand">
+          <div class="brand-mark">CL</div>
+          <div>
+            <strong>CoinLyte</strong>
+            <span>Business Control Room</span>
+          </div>
+        </div>
+        <nav class="nav-stack" aria-label="Primary">
+          <button class="nav-btn active" data-view="overview">Command</button>
+          <button class="nav-btn" data-view="analytics">Analytics</button>
+          <button class="nav-btn" data-view="intelligence">Channel Intelligence</button>
+          <button class="nav-btn" data-view="planner">Content Planner</button>
+          <button class="nav-btn" data-view="brand">Brand Deals</button>
+          <button class="nav-btn" data-view="team">Team Access</button>
+          <button class="nav-btn" data-view="refresh">Refresh</button>
+        </nav>
+        <div class="side-card">
+          <span class="status-dot live"></span>
+          <div>
+            <strong id="side-refresh">May 15, 2026</strong>
+            <span id="side-refresh-mode">Latest cached build</span>
+          </div>
+        </div>
+      </header>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Owner dashboard</p>
+            <h2 id="view-title">Command Centre</h2>
+          </div>
+          <div class="top-actions">
+            <div id="sync-pill" class="sync-pill">Ready</div>
+            <button id="refresh-now" class="primary-btn" type="button">Refresh Live Data</button>
+          </div>
+        </header>
+
+        <section id="overview" class="view active" aria-labelledby="view-title"></section>
+        <section id="analytics" class="view" aria-labelledby="view-title"></section>
+        <section id="intelligence" class="view" aria-labelledby="view-title"></section>
+        <section id="ideas" class="view" aria-labelledby="view-title"></section>
+        <section id="pulse" class="view" aria-labelledby="view-title"></section>
+        <section id="market" class="view" aria-labelledby="view-title"></section>
+        <section id="planner" class="view" aria-labelledby="view-title"></section>
+        <section id="calendar" class="view" aria-labelledby="view-title"></section>
+        <section id="team" class="view" aria-labelledby="view-title"></section>
+        <section id="brand" class="view" aria-labelledby="view-title"></section>
+        <section id="review" class="view" aria-labelledby="view-title"></section>
+        <section id="refresh" class="view" aria-labelledby="view-title"></section>
+      </main>
+    </div>
+
+    <div id="modal-root" class="modal-root is-hidden"></div>
+    <div id="toast-root" class="toast-root" aria-live="polite"></div>
+
+    <script src="assets/data.js"></script>
+    <script src="assets/live-data.js"></script>
+    <script src="assets/app.js?v=20260517-11"></script>
+  </body>
+</html>

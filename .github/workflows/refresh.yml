@@ -1,0 +1,42 @@
+name: Refresh CoinLyte Command Centre
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Fetch intelligence data
+        env:
+          YT_API_KEY: ${{ secrets.YT_API_KEY }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python3 .github/scripts/refresh.py
+
+      - name: Commit refreshed data
+        run: |
+          git config user.email "action@github.com"
+          git config user.name "CoinLyte Auto-Refresh"
+          git add assets/live-data.js assets/refresh-status.json
+          git diff --staged --quiet || git commit -m "Refresh data: $(date '+%b %d, %Y %H:%M UTC')"
+          git push
+
+      - name: Trigger Vercel redeploy
+        env:
+          VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: |
+          if [ -n "$VERCEL_DEPLOY_HOOK" ]; then
+            curl -s -X POST "$VERCEL_DEPLOY_HOOK"
+          else
+            echo "VERCEL_DEPLOY_HOOK not set, skipping redeploy hook"
+          fi
