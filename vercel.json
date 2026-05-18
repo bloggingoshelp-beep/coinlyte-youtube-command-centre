@@ -14,13 +14,7 @@
     },
     "api/static.js": {
       "maxDuration": 10,
-      "includeFiles": [
-        "assets/**",
-        "mockups/**",
-        "index.html",
-        "login.html",
-        "*.png"
-      ]
+      "includeFiles": "assets/**"
     }
   },
   "routes": [
