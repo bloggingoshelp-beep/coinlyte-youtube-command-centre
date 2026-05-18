@@ -32,6 +32,8 @@ npm test
 - Blocker alerts are visible.
 - Daily action cards are visible.
 - Buttons jump to Planner, Intelligence, Team Access, and Brand Deals.
+- Dismiss buttons hide Command alerts/actions and Restore brings them back.
+- Owner `CL` profile button opens settings; Logout routes to the login page.
 
 ## Intelligence
 
@@ -44,6 +46,8 @@ npm test
 ## Planner
 
 - Planner board shows stage columns.
+- Backup Board downloads JSON.
+- Import Backup asks for confirmation before replacing local data.
 - Add Video opens modal.
 - Edit card opens modal.
 - Category and priority are dropdowns.
@@ -59,13 +63,17 @@ npm test
 - Currency and amount are aligned.
 - Deal type dropdown works.
 - Brand cards remain color coded by status.
+- Backup Brands downloads JSON.
+- Import Backup asks for confirmation before replacing brand records.
 
 ## Team Access
 
 - Add/edit team member works.
 - Multiple notification channels can be selected.
 - App access checkboxes can be selected.
+- Access status can be set to Active or Paused.
 - Notification board displays stage/assignment alerts.
+- Notification items can be opened, marked read/unread, and dismissed.
 
 ## Refresh
 

@@ -8,7 +8,8 @@ Private operating dashboard for the CoinLyte YouTube business. This repo is inte
 - Tracks YouTube analytics, latest uploads, audience comments, competitor signals, market intelligence, and AI-generated video ideas.
 - Converts ideas into Content Planner cards with source links, locked research briefs, editor reference sources, assignees, target dates, and stage movement.
 - Tracks Brand Deals and sponsor records.
-- Supports Team Access, app permissions, in-app notifications, and optional email notifications.
+- Supports Team Access, app permissions, in-app notifications with dismiss/read controls, and optional email notifications.
+- Provides owner reliability controls: planner backup/import, brand backup/import, owner settings, and logout.
 - Runs a refresh workflow through Vercel API + GitHub Actions.
 
 ## Main App Areas
@@ -18,7 +19,7 @@ Private operating dashboard for the CoinLyte YouTube business. This repo is inte
 - `Channel Intelligence`: market intel, competitor intel, community pulse, and video ideas.
 - `Content Planner`: board, calendar, and team hub.
 - `Brand Deals`: brand directory and deal board.
-- `Team Access`: team users, permissions, and notifications.
+- `Team Access`: team users, access status, board permissions, notification channels, and notification inbox.
 - `Refresh`: trigger and monitor live-data refresh.
 
 ## Local Checks
@@ -38,6 +39,8 @@ Then open the local app and manually check:
 - Source buttons open in a new tab.
 - Brand modal saves.
 - Team member modal saves multiple notification channels.
+- Owner settings opens from the `CL` profile button and logout returns to the login page.
+- Brand backup downloads and import asks for confirmation before replacing records.
 - Refresh screen still renders.
 
 ## Data Sources

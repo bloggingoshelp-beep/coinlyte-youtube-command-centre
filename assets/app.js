@@ -61,6 +61,7 @@
     hubLinks: store.get("cl_hub_links_v3", data.defaultHubLinks).map(withId),
     brands: store.get("cl_brands_v3", data.defaultBrands).map(withId),
     dismissedIdeas: store.get("cl_dismissed_ideas_v1", []),
+    dismissedCommand: store.get("cl_dismissed_command_v1", []),
     teamMembers: normalizeTeamMembers(store.get("cl_team_members_v1", DEFAULT_TEAM)),
     notifications: store.get("cl_notifications_v1", [])
   };
@@ -350,6 +351,9 @@
   function saveDismissedIdeas() {
     store.set("cl_dismissed_ideas_v1", state.dismissedIdeas);
   }
+  function saveDismissedCommand() {
+    store.set("cl_dismissed_command_v1", state.dismissedCommand);
+  }
   function saveTeam() {
     store.set("cl_team_members_v1", state.teamMembers);
   }
@@ -361,6 +365,7 @@
       ...member,
       access: Array.isArray(member.access) && member.access.length ? member.access : ["Content Planner"],
       email: member.email || "",
+      accessStatus: member.accessStatus || "Active",
       channels: normalizeChannels(member),
       notifyStages: member.notifyStages !== false
     }));
@@ -388,6 +393,8 @@
   function createNotification({ card, type, message, memberId }) {
     const assigneeId = memberId || card?.assignedTo || "";
     const assignee = state.teamMembers.find((member) => member.id === assigneeId);
+    if (assignee?.accessStatus === "Paused") return;
+    const channels = normalizeChannels(assignee || {});
     const note = withId({
       type,
       cardId: card?.id || "",
@@ -395,9 +402,9 @@
       message,
       memberId: assigneeId,
       memberName: assignee?.name || "Unassigned",
-      channels: normalizeChannels(assignee),
+      channels,
       email: assignee?.email || "",
-      emailStatus: normalizeChannels(assignee).includes("Email") && assignee?.email ? "queued" : "",
+      emailStatus: channels.includes("Email") && assignee?.email ? "queued" : "",
       createdAt: new Date().toISOString(),
       read: false
     });
@@ -406,6 +413,7 @@
     saveNotifications();
     if (note.emailStatus) sendEmailNotification(note);
     toast(`${note.memberName}: ${message}`);
+    if (state.view === "team") renderTeam();
   }
   async function sendEmailNotification(note) {
     try {
@@ -725,11 +733,9 @@
     const latestComments = data.comments.filter((comment) => String(comment.video || comment.videoTitle || "").includes(latestUpload.title.slice(0, 24))).length;
     const searchTraffic = data.traffic?.find((row) => row[0] === "YouTube Search")?.[1] || data.traffic?.[0]?.[1] || 0;
     const urgentCards = activePipeline.filter((card) => String(card.priority || "").toLowerCase() === "urgent");
-    const sourceMissing = activePipeline.filter((card) => !card.sourceUrl && !(card.sourceLinks || []).length);
     const unassigned = activePipeline.filter((card) => !card.assignedTo);
     const overdue = activePipeline.filter((card) => isOverdue(card));
     const unreadNotifications = state.notifications.filter((note) => !note.read).length;
-    const sourceStatus = commandSourceStatus(nextCard);
     const targetStatus = commandTargetStatus(nextCard);
     const ownerName = nextCard?.assignedTo ? teamMemberName(nextCard.assignedTo) : "";
     const sponsorWatch = activeBrands[0];
@@ -770,27 +776,27 @@
             ${commandChip(stageEmoji(nextCard?.stage) + " " + stageLabel(nextCard?.stage || "ideas"), "blue")}
             ${commandChip(ownerName ? `👤 ${ownerName}` : "👤 Unassigned", ownerName ? "green" : "red")}
             ${commandChip(`📌 ${targetStatus.label}`, targetStatus.tone)}
-            ${commandChip(`🔗 ${sourceStatus.label}`, sourceStatus.tone)}
             ${commandChip(`⚡ ${nextCard?.priority || topIdea?.priority || "High"}`, priorityTone(nextCard?.priority || topIdea?.priority))}
           </div>
           <div class="command-action-row">
             <button class="primary-btn" data-command-jump="planner" type="button">Open Planner</button>
-            <button class="ghost-btn" data-command-jump="${sourceMissing.length ? "planner" : "market"}" type="button">${sourceMissing.length ? "Fix Sources" : "Check Market"}</button>
+            <button class="ghost-btn" data-command-jump="market" type="button">Check Market</button>
             <button class="ghost-btn" data-command-jump="team" type="button">Assign Team</button>
           </div>
         </section>
         <aside class="daily-alert-stack">
-          ${commandAlert("red", "Overdue", overdue.length, overdue.length ? "Move target date or publish decision today." : "No overdue active cards.", "planner", "Open")}
-          ${commandAlert("gold", "Missing Source", sourceMissing.length, sourceMissing.length ? "Attach original source before recording/editing." : "Research links look ready.", "planner", "Review")}
-          ${commandAlert("purple", "Unassigned", unassigned.length, unassigned.length ? "Give each active card an owner." : "Every active card has an owner.", "team", "Assign")}
-          ${commandAlert("teal", "Unread Alerts", unreadNotifications, unreadNotifications ? "Team/stage notifications need review." : "No unread board notifications.", "team", "Inbox")}
+          ${commandAlert("cmd-overdue", "red", "Overdue", overdue.length, overdue.length ? "Move target date or publish decision today." : "No overdue active cards.", "planner", "Open")}
+          ${commandAlert("cmd-urgent", "gold", "Urgent Cards", urgentCards.length, urgentCards.length ? "Check urgent ideas before recording anything new." : "No urgent cards waiting.", "planner", "Review")}
+          ${commandAlert("cmd-unassigned", "purple", "Unassigned", unassigned.length, unassigned.length ? "Give each active card an owner." : "Every active card has an owner.", "team", "Assign")}
+          ${commandAlert("cmd-notifications", "teal", "Unread Alerts", unreadNotifications, unreadNotifications ? "Team/stage notifications need review." : "No unread board notifications.", "team", "Inbox")}
+          ${state.dismissedCommand.length ? `<button class="ghost-btn compact-btn" data-restore-command type="button">Restore ${state.dismissedCommand.length} dismissed</button>` : ""}
         </aside>
       </div>
       <div class="today-action-grid">
-        ${todayActionCard("blue", "🎬", "Production move", nextCard ? `${stageLabel(nextCard.stage)}: ${nextStageNudge(nextCard)}` : "Add the next pipeline card", nextCard?.title || "No active planner card yet", "planner", "Planner")}
-        ${todayActionCard("pink", "💬", "Audience demand", commentIdea.title, commentIdea.note, "pulse", "Comments")}
-        ${todayActionCard("teal", "📰", "Market signal", topIdea?.title || "Scan market intelligence", topIdea?.reason || "Use news, competitors, and comments to pick the best Indian angle.", "market", "Market")}
-        ${todayActionCard("gold", "💰", "Money watch", sponsorWatch?.name || "No active sponsor watch", sponsorWatch ? `${sponsorWatch.status} · ${formatDealValue(sponsorWatch)}` : "Add brand records or move an active deal forward.", "brand", "Brands")}
+        ${todayActionCard("qa-production", "blue", "🎬", "Production move", nextCard ? `${stageLabel(nextCard.stage)}: ${nextStageNudge(nextCard)}` : "Add the next pipeline card", nextCard?.title || "No active planner card yet", "planner", "Planner")}
+        ${todayActionCard("qa-comments", "pink", "💬", "Audience demand", commentIdea.title, commentIdea.note, "pulse", "Comments")}
+        ${todayActionCard("qa-market", "teal", "📰", "Market signal", topIdea?.title || "Scan market intelligence", topIdea?.reason || "Use news, competitors, and comments to pick the best Indian angle.", "market", "Market")}
+        ${todayActionCard("qa-brand", "gold", "💰", "Money watch", sponsorWatch?.name || "No active sponsor watch", sponsorWatch ? `${sponsorWatch.status} · ${formatDealValue(sponsorWatch)}` : "Add brand records or move an active deal forward.", "brand", "Brands")}
       </div>
       <div class="panel command-focus">
         <div class="panel-head"><div><h3>Owner Action Queue</h3><div class="panel-sub">Fast horizontal moves for the next working session.</div></div></div>
@@ -841,39 +847,62 @@
           </div>
         </div>
       </div>`;
-    $all("[data-command-jump]").forEach((btn) => btn.addEventListener("click", () => setView(btn.dataset.commandJump)));
+    bindCommandControls();
   }
   function commandDecisionLine(card, idea) {
     if (!card) return idea?.reason || "Start by adding one strong idea into the planner, then assign an owner and target date.";
     const stage = stageLabel(card.stage).toLowerCase();
     const owner = card.assignedTo ? teamMemberName(card.assignedTo) : "no owner yet";
-    const source = card.sourceUrl || (card.sourceLinks || []).length ? "source is ready" : "source needs attaching";
-    return `${stage} card with ${owner}; ${source}. Next: ${nextStageNudge(card).toLowerCase()}`;
+    return `${stage} card with ${owner}. Next: ${nextStageNudge(card).toLowerCase()}`;
   }
   function commandChip(label, tone = "blue") {
     return `<span class="command-chip ${tone}">${escapeHTML(label)}</span>`;
   }
-  function commandAlert(tone, label, value, note, view, action) {
-    return `<button class="command-alert ${tone}" data-command-jump="${view}" type="button">
+  function isCommandDismissed(key) {
+    return state.dismissedCommand.includes(key);
+  }
+  function dismissCommandItem(key) {
+    if (!state.dismissedCommand.includes(key)) state.dismissedCommand.push(key);
+    saveDismissedCommand();
+    renderOverview();
+    toast("Command item dismissed.", { label: "Undo", run: () => {
+      state.dismissedCommand = state.dismissedCommand.filter((item) => item !== key);
+      saveDismissedCommand();
+      renderOverview();
+    } });
+  }
+  function restoreCommandItems() {
+    state.dismissedCommand = [];
+    saveDismissedCommand();
+    renderOverview();
+    toast("Command items restored.");
+  }
+  function bindCommandControls() {
+    $all("[data-command-jump]").forEach((btn) => btn.addEventListener("click", () => setView(btn.dataset.commandJump)));
+    $all("[data-command-dismiss]").forEach((btn) => btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      dismissCommandItem(btn.dataset.commandDismiss);
+    }));
+    $("[data-restore-command]")?.addEventListener("click", restoreCommandItems);
+  }
+  function commandAlert(key, tone, label, value, note, view, action) {
+    if (isCommandDismissed(key)) return "";
+    return `<article class="command-alert ${tone}">
       <span>${escapeHTML(label)}</span>
       <strong>${escapeHTML(value)}</strong>
       <small>${escapeHTML(note)}</small>
-      <em>${escapeHTML(action)} →</em>
-    </button>`;
+      <div class="command-card-actions"><button class="mini-link-btn" data-command-jump="${view}" type="button">${escapeHTML(action)} →</button><button class="dismiss-mini-btn" data-command-dismiss="${key}" type="button">Dismiss</button></div>
+    </article>`;
   }
-  function todayActionCard(tone, icon, label, title, note, view, action) {
-    return `<button class="today-action-card ${tone}" data-command-jump="${view}" type="button">
+  function todayActionCard(key, tone, icon, label, title, note, view, action) {
+    if (isCommandDismissed(key)) return "";
+    return `<article class="today-action-card ${tone}">
       <span class="today-action-icon">${escapeHTML(icon)}</span>
       <span class="today-action-label">${escapeHTML(label)}</span>
       <strong>${escapeHTML(title)}</strong>
       <small>${escapeHTML(note)}</small>
-      <em>${escapeHTML(action)} →</em>
-    </button>`;
-  }
-  function commandSourceStatus(card) {
-    if (!card) return { label: "Pick idea", tone: "gold" };
-    if (card.sourceUrl || (card.sourceLinks || []).length) return { label: "Source ready", tone: "green" };
-    return { label: "Source missing", tone: "red" };
+      <div class="command-card-actions"><button class="mini-link-btn" data-command-jump="${view}" type="button">${escapeHTML(action)} →</button><button class="dismiss-mini-btn" data-command-dismiss="${key}" type="button">Dismiss</button></div>
+    </article>`;
   }
   function commandTargetStatus(card) {
     if (!card) return { label: "No target", tone: "gold" };
@@ -1631,7 +1660,7 @@
       idea.reason || "",
       idea.sourceAge ? `Source age/public timing: ${idea.sourceAge}` : ""
     ].filter(Boolean).join("\n\n");
-    state.pipeline.unshift(withId({
+    const newCard = withId({
       title: idea.title,
       category: idea.category,
       priority: idea.urgency,
@@ -1646,8 +1675,15 @@
       source: idea.source || "Intelligence",
       sourceUrl: primaryUrl,
       sourceLinks
-    }));
+    });
+    state.pipeline.unshift(newCard);
     savePipeline();
+    createNotification({
+      card: newCard,
+      type: "new-card",
+      memberId: "owner-kirtish",
+      message: `${newCard.title} was added to planner from ${newCard.source || "Intelligence"}.`
+    });
     render();
     toast("Added to planner.", { label: "Open Planner", run: () => {
       state.plannerTab = "board";
@@ -1742,7 +1778,8 @@
       hubLinks: state.hubLinks,
       teamMembers: state.teamMembers,
       notifications: state.notifications,
-      dismissedIdeas: state.dismissedIdeas
+      dismissedIdeas: state.dismissedIdeas,
+      dismissedCommand: state.dismissedCommand
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -1774,12 +1811,14 @@
             state.teamMembers = Array.isArray(payload.teamMembers) ? normalizeTeamMembers(payload.teamMembers) : state.teamMembers;
             state.notifications = Array.isArray(payload.notifications) ? payload.notifications : state.notifications;
             state.dismissedIdeas = Array.isArray(payload.dismissedIdeas) ? payload.dismissedIdeas : state.dismissedIdeas;
+            state.dismissedCommand = Array.isArray(payload.dismissedCommand) ? payload.dismissedCommand : state.dismissedCommand;
             savePipeline();
             saveBrands();
             saveHub();
             saveTeam();
             saveNotifications();
             saveDismissedIdeas();
+            saveDismissedCommand();
             renderPlanner();
             toast("Backup restored.");
           }
@@ -1883,7 +1922,7 @@
   }
   function teamMemberCard(member) {
     return `<article class="list-card team-member-card">
-      <div class="card-actions"><span class="tag teal">👤 ${escapeHTML(member.role || "Team")}</span><span class="tag blue">${member.notifyStages ? "🔔 Stage alerts" : "🔕 Quiet"}</span></div>
+      <div class="card-actions"><span class="tag teal">👤 ${escapeHTML(member.role || "Team")}</span><span class="tag ${member.accessStatus === "Paused" ? "red" : "green"}">${escapeHTML(member.accessStatus || "Active")}</span><span class="tag blue">${member.notifyStages ? "🔔 Stage alerts" : "🔕 Quiet"}</span></div>
       <h4>${escapeHTML(member.name)}</h4>
       <p>${escapeHTML(member.userId || "No user ID")} · ${escapeHTML(normalizeChannels(member).join(", "))}${member.email ? ` · ${escapeHTML(member.email)}` : ""}</p>
       <div class="access-chip-row">${(member.access || []).map((item) => `<span>${escapeHTML(item)}</span>`).join("")}</div>
@@ -1895,7 +1934,11 @@
     const channels = Array.isArray(note.channels) ? note.channels.join(", ") : note.channel || "In-app";
     return `<article class="notification-item ${note.read ? "read" : ""}">
       <div><strong>${escapeHTML(note.memberName)}</strong><p>${escapeHTML(note.message)}</p><span>${escapeHTML(channels)}${escapeHTML(emailText)} · ${escapeHTML(new Date(note.createdAt).toLocaleString("en-GB"))}</span></div>
-      <button class="ghost-btn compact-btn" data-open-notification="${note.cardId}" type="button" ${note.cardId ? "" : "disabled"}>Open Card</button>
+      <div class="notification-actions">
+        <button class="ghost-btn compact-btn" data-open-notification="${note.cardId}" type="button" ${note.cardId ? "" : "disabled"}>Open Card</button>
+        <button class="ghost-btn compact-btn" data-read-notification="${note.id}" type="button">${note.read ? "Unread" : "Mark Read"}</button>
+        <button class="danger-btn compact-btn" data-dismiss-notification="${note.id}" type="button">Dismiss</button>
+      </div>
     </article>`;
   }
   function bindPlannerTeam() {
@@ -1920,6 +1963,17 @@
       saveNotifications();
       renderTeam();
     });
+    $all("[data-read-notification]").forEach((btn) => btn.addEventListener("click", () => {
+      state.notifications = state.notifications.map((note) => note.id === btn.dataset.readNotification ? { ...note, read: !note.read } : note);
+      saveNotifications();
+      renderTeam();
+    }));
+    $all("[data-dismiss-notification]").forEach((btn) => btn.addEventListener("click", () => {
+      state.notifications = state.notifications.filter((note) => note.id !== btn.dataset.dismissNotification);
+      saveNotifications();
+      renderTeam();
+      toast("Notification dismissed.");
+    }));
     $all("[data-open-notification]").forEach((btn) => btn.addEventListener("click", () => {
       const note = state.notifications.find((item) => item.cardId === btn.dataset.openNotification);
       if (note) {
@@ -1935,7 +1989,7 @@
   }
   function openTeamMemberModal(member) {
     const editing = Boolean(member);
-    const current = member || { id: "", name: "", role: "Editor", userId: "", email: "", channels: ["In-app"], access: ["Content Planner"], notifyStages: true };
+    const current = member || { id: "", name: "", role: "Editor", userId: "", email: "", accessStatus: "Active", channels: ["In-app"], access: ["Content Planner"], notifyStages: true };
     const selectedChannels = normalizeChannels(current);
     $("#modal-root").classList.remove("is-hidden");
     $("#modal-root").innerHTML = `
@@ -1946,6 +2000,7 @@
           <label>User ID<input name="userId" required value="${escapeHTML(current.userId || "")}" placeholder="editor01"></label>
           <label>Email<input name="email" type="email" value="${escapeHTML(current.email || "")}" placeholder="name@example.com"></label>
           <label>Role<select name="role">${["Owner", "Manager", "Editor", "Researcher", "Sponsor Ops", "Viewer"].map((role) => `<option ${current.role === role ? "selected" : ""}>${role}</option>`).join("")}</select></label>
+          <label>Access status<select name="accessStatus">${["Active", "Paused"].map((status) => `<option ${current.accessStatus === status ? "selected" : ""}>${status}</option>`).join("")}</select></label>
         </div>
         <div class="modal-section">
           <div class="section-title">🔔 Notification Channels</div>
@@ -1971,6 +2026,7 @@
         userId: form.get("userId").trim(),
         email: form.get("email").trim(),
         role: form.get("role"),
+        accessStatus: form.get("accessStatus") || "Active",
         channels: form.getAll("channels"),
         access: form.getAll("access"),
         notifyStages: Boolean(form.get("notifyStages"))
@@ -2384,7 +2440,15 @@
   function brandDirectoryContent() {
     return `
       <div class="panel brand-panel">
-        <div class="panel-head"><div><h3>Brand Directory</h3><div class="panel-sub">Record website, communication channel, owner, and notes before it becomes a deal.</div></div><button class="primary-btn" data-add-brand type="button">Add Brand Record</button></div>
+        <div class="panel-head">
+          <div><h3>Brand Directory</h3><div class="panel-sub">Record website, communication channel, owner, and notes before it becomes a deal.</div></div>
+          <div class="card-actions">
+            <button class="ghost-btn" data-backup-brands type="button">Backup Brands</button>
+            <button class="ghost-btn" data-import-brands type="button">Import Backup</button>
+            <input class="is-hidden" id="brand-backup-file" type="file" accept="application/json">
+            <button class="primary-btn" data-add-brand type="button">Add Brand Record</button>
+          </div>
+        </div>
         <div class="grid cols-4">
           ${metric("Total Brands", state.brands.length, "All saved records")}
           ${metric("Active", state.brands.filter((b) => !["Paid", "Declined"].includes(b.status)).length, "May become deals")}
@@ -2396,7 +2460,15 @@
   }
   function brandBoardContent(filtered, confirmed) {
     return `<div class="panel brand-panel">
-      <div class="panel-head"><div><h3>Deal Board</h3><div class="panel-sub">Track progress only after a brand becomes an active sponsorship opportunity.</div></div><button class="primary-btn" data-add-brand type="button">Add Brand Deal</button></div>
+      <div class="panel-head">
+        <div><h3>Deal Board</h3><div class="panel-sub">Track progress only after a brand becomes an active sponsorship opportunity.</div></div>
+        <div class="card-actions">
+          <button class="ghost-btn" data-backup-brands type="button">Backup Brands</button>
+          <button class="ghost-btn" data-import-brands type="button">Import Backup</button>
+          <input class="is-hidden" id="brand-backup-file" type="file" accept="application/json">
+          <button class="primary-btn" data-add-brand type="button">Add Brand Deal</button>
+        </div>
+      </div>
       <div class="grid cols-4">
         ${metric("Active", state.brands.filter((b) => !["Paid", "Declined"].includes(b.status)).length, "Needs follow-up")}
         ${metric("Confirmed", confirmed.length, "Revenue likely")}
@@ -2409,6 +2481,9 @@
   }
   function bindBrandButtons() {
     $("[data-add-brand]")?.addEventListener("click", () => openBrandModal());
+    $("[data-backup-brands]")?.addEventListener("click", backupBrands);
+    $("[data-import-brands]")?.addEventListener("click", () => $("#brand-backup-file")?.click());
+    $("#brand-backup-file")?.addEventListener("change", importBrandBackup);
     $("#brand-stage")?.addEventListener("change", (event) => {
       state.brandStage = event.target.value;
       renderBrand();
@@ -2416,6 +2491,51 @@
     $all("[data-edit-brand]").forEach((btn) => btn.addEventListener("click", () => openBrandModal(state.brands.find((brand) => brand.id === btn.dataset.editBrand))));
     $all("[data-advance-brand]").forEach((btn) => btn.addEventListener("click", () => advanceBrand(btn.dataset.advanceBrand)));
     $all("[data-delete-brand]").forEach((btn) => btn.addEventListener("click", () => deleteBrand(btn.dataset.deleteBrand)));
+  }
+  function backupBrands() {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      app: "CoinLyte Command Centre",
+      scope: "brand-deals",
+      brands: state.brands
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `coinlyte-brand-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast("Brand backup downloaded.");
+  }
+  function importBrandBackup(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const payload = JSON.parse(String(reader.result || "{}"));
+        if (!Array.isArray(payload.brands)) throw new Error("Missing brand records");
+        confirmDialog({
+          title: "Restore brand backup?",
+          body: "This replaces the current Brand Directory and Deal Board with the selected backup file.",
+          confirmText: "Restore Brands",
+          onConfirm: () => {
+            state.brands = payload.brands.map(withId);
+            saveBrands();
+            renderBrand();
+            toast("Brand backup restored.");
+          }
+        });
+      } catch {
+        toast("That brand backup file could not be read.");
+      } finally {
+        event.target.value = "";
+      }
+    };
+    reader.readAsText(file);
   }
   function brandCard(brand) {
     const tone = brandStatusTone(brand.status);
@@ -2673,6 +2793,39 @@
     setSync(state.refreshJob?.status || "Ready");
     renderRefresh();
   }
+  function openOwnerModal() {
+    $("#modal-root").classList.remove("is-hidden");
+    $("#modal-root").innerHTML = `
+      <div class="modal owner-settings-modal" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <div><p class="eyebrow">Owner · Access</p><h3>Owner Settings</h3><div class="panel-sub">Production login is controlled by the Vercel <strong>OWNER_ACCESS_CODE</strong> environment variable.</div></div>
+          <button class="ghost-btn" data-close type="button">Close</button>
+        </div>
+        <div class="grid cols-2">
+          <div class="list-card">
+            <span class="tag green">🔐 Owner login code</span>
+            <h4>Managed in Vercel</h4>
+            <p>To reset the owner login code, change <strong>OWNER_ACCESS_CODE</strong> in Vercel and redeploy. No GitHub, YouTube, access-code, or API secrets are exposed inside frontend files.</p>
+            <div class="card-actions">
+              <a class="ghost-btn" href="https://vercel.com/kirtish-vyas-projects/coinlyte-youtube-command-centre/settings/environment-variables" target="_blank" rel="noreferrer">Open Vercel Env</a>
+            </div>
+          </div>
+          <div class="list-card">
+            <span class="tag red">🚪 Session</span>
+            <h4>Logout from this browser</h4>
+            <p>Use this before sharing your screen or when you finish working on a public machine.</p>
+            <button class="danger-btn" data-logout type="button">Logout</button>
+          </div>
+        </div>
+        <div class="modal-actions"><button class="primary-btn" data-close type="button">Done</button></div>
+      </div>`;
+    $all("[data-close]", $("#modal-root")).forEach((btn) => btn.addEventListener("click", closeModal));
+    $("[data-logout]", $("#modal-root"))?.addEventListener("click", logoutOwner);
+  }
+  function logoutOwner() {
+    sessionStorage.removeItem("cl_local_session");
+    window.location.href = "/api/logout";
+  }
   function setSync(text) {
     $("#sync-pill").textContent = text;
   }
@@ -2719,6 +2872,7 @@
       setView("refresh");
       triggerRefresh();
     });
+    $("#owner-menu")?.addEventListener("click", openOwnerModal);
   }
   init();
 })();

@@ -169,6 +169,16 @@ a { color: inherit; }
 }
 .topbar h2 { margin: 0; font-size: clamp(1.55rem, 3vw, 2.35rem); }
 .top-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.owner-menu-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(20,33,61,.14);
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6c5ce7, #00a86b);
+  color: #fff;
+  font-weight: 950;
+  box-shadow: 0 8px 18px rgba(26,39,68,.14);
+}
 .primary-btn, .ghost-btn, .danger-btn {
   min-height: 38px;
   border-radius: var(--radius);
@@ -342,6 +352,26 @@ a { color: inherit; }
   font-style: normal;
   font-weight: 900;
 }
+.command-card-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.mini-link-btn,
+.dismiss-mini-btn {
+  min-height: 28px;
+  border-radius: 99px;
+  border: 1px solid var(--line);
+  padding: 5px 10px;
+  background: #fff;
+  color: var(--ink);
+  font-size: .76rem;
+  font-weight: 900;
+}
+.mini-link-btn { color: var(--blue); border-color: #c6ddff; background: #f5f9ff; }
+.dismiss-mini-btn { color: #8a4f00; border-color: #f6dfad; background: #fff8e8; }
 .command-alert.red { border-left-color: var(--red); background: linear-gradient(90deg, #fff1f2, #fff 28%); }
 .command-alert.gold { border-left-color: var(--gold); background: linear-gradient(90deg, #fff8e1, #fff 28%); }
 .command-alert.purple { border-left-color: var(--violet); background: linear-gradient(90deg, var(--violet-soft), #fff 30%); }
@@ -1801,6 +1831,12 @@ th { color: var(--muted); font-size: .74rem; text-transform: uppercase; }
 .notification-item span {
   color: var(--muted);
   font-size: .76rem;
+}
+.notification-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
 }
 .access-check-grid {
   display: grid;
