@@ -48,6 +48,11 @@ export default function handler(req, res) {
   try {
     return sendFile(res, filePath);
   } catch {
+    if (extname(filePath)) {
+      res.statusCode = 404;
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      return res.end("Not found");
+    }
     return sendFile(res, join(root, "index.html"));
   }
 }
