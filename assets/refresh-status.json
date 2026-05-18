@@ -1,13 +1,13 @@
 {
-  "status": "seeded",
-  "completedAt": "2026-05-15T19:24:50.533Z",
-  "lastRefresh": "May 15, 2026",
+  "status": "completed",
+  "completedAt": "2026-05-18T15:37:15Z",
+  "lastRefresh": "May 18, 2026",
   "datasets": {
     "channel": true,
     "analytics": true,
-    "comments": 200,
-    "competitors": true,
-    "news": true,
-    "ideas": true
+    "comments": 0,
+    "competitors": 24,
+    "news": 32,
+    "ideas": 15
   }
 }
