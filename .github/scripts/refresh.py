@@ -10,6 +10,9 @@ ANTHROPIC_KEY = os.environ.get('ANTHROPIC_API_KEY','')
 CHANNEL_ID = "UCaTJZv99ieTa6f5ht4gEXMA"
 print(f"Secrets: CLIENT_ID={'SET' if CID else 'MISSING'} | SECRET={'SET' if CSEC else 'MISSING'} | REFRESH_TOKEN={'SET' if RTOK else 'MISSING'} | API_KEY={'SET' if KEY else 'MISSING'} | ANTHROPIC={'SET' if ANTHROPIC_KEY else 'MISSING'}")
 
+def utc_now():
+  return datetime.datetime.now(datetime.timezone.utc)
+
 SCAM_WORDS = ['whatsapp','telegram','signal','dm me','message me','invest with me',
   'double your','guaranteed profit','profit of','trading expert','account manager',
   'recovery','lost funds','contact me','reach me','bit.ly','t.me','wa.me',
@@ -101,7 +104,7 @@ def oembed_title(video_id):
 MAX_NEWS_AGE_DAYS = 7
 
 def _parse_pub(pub_str):
-  """Parse RSS pubDate → datetime (UTC naive). Returns None on failure."""
+  """Parse RSS pubDate to a timezone-aware UTC datetime. Returns None on failure."""
   if not pub_str: return None
   s = pub_str.strip()
   # RFC-2822: Mon, 15 Jan 2026 08:00:00 +0000
@@ -110,7 +113,7 @@ def _parse_pub(pub_str):
     try:
       import time as _time
       dt = datetime.datetime.strptime(s[:31], fmt)
-      return dt.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+      return dt.astimezone(datetime.timezone.utc)
     except: pass
   # email.utils fallback
   try:
@@ -118,14 +121,14 @@ def _parse_pub(pub_str):
     tt = email.utils.parsedate_tz(s)
     if tt:
       ts = email.utils.mktime_tz(tt)
-      return datetime.datetime.utcfromtimestamp(ts)
+      return datetime.datetime.fromtimestamp(ts, datetime.timezone.utc)
   except: pass
   return None
 
 def _days_old(pub_str):
   dt = _parse_pub(pub_str)
   if dt is None: return 0        # unknown age → include
-  return max(0, (datetime.datetime.utcnow() - dt).days)
+  return max(0, (utc_now() - dt).days)
 
 def parse_news_rss(raw, region, max_items=6):
   items = []
@@ -264,13 +267,9 @@ if KEY:
         for v in coinlyte_vids[:10]:
           vid_id = v.get('videoId','')
           if not vid_id: continue
-          if ACCESS_TOKEN:
-            vraw = safe_get(
-              f'https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId={vid_id}&maxResults=50&order=time',
-              headers={'Authorization': f'Bearer {ACCESS_TOKEN}'}
-            )
-          else:
-            vraw = safe_get(f'https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId={vid_id}&maxResults=50&order=time&key={KEY}')
+          # Per-video public comments work with the API key and do not need the
+          # OAuth comment scope, so this is the reliable fallback for dashboards.
+          vraw = safe_get(f'https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId={vid_id}&maxResults=50&order=time&key={KEY}')
           if not vraw: continue
           vp = json.loads(vraw)
           if vp.get('error'): continue
@@ -299,13 +298,7 @@ if KEY:
         for v in coinlyte_vids[:10]:
           vid_id = v.get('videoId','')
           if not vid_id: continue
-          if ACCESS_TOKEN:
-            vraw = safe_get(
-              f'https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId={vid_id}&maxResults=50&order=time',
-              headers={'Authorization': f'Bearer {ACCESS_TOKEN}'}
-            )
-          else:
-            vraw = safe_get(f'https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId={vid_id}&maxResults=50&order=time&key={KEY}')
+          vraw = safe_get(f'https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId={vid_id}&maxResults=50&order=time&key={KEY}')
           if not vraw: continue
           vp = json.loads(vraw)
           if vp.get('error'): continue
@@ -412,8 +405,8 @@ if ACCESS_TOKEN:
 
   p28  = fp(start_28, end_date, '28d', include_hourly=False)
   p90  = fp(start_90, end_date, '90d', include_hourly=False)
-  print("  Analytics hourly (7d)...")
-  hourly_7d = analytics_get(f"ids=channel%3D%3D{CHANNEL_ID}&startDate={start_7}&endDate={end_date}&metrics=views,estimatedMinutesWatched&dimensions=hour&sort=-views&maxResults=24", ACCESS_TOKEN)
+  print("  Analytics hourly (7d): skipped (YouTube Analytics rejected hour dimension for this channel)")
+  hourly_7d = {}
   p90['ageGender'] = analytics_get(f"ids=channel%3D%3D{CHANNEL_ID}&startDate={start_90}&endDate={end_date}&metrics=viewerPercentage&dimensions=ageGroup,gender", ACCESS_TOKEN)
   p365 = fp(start_365, end_date, '1yr', include_hourly=False)
   p365['ageGender'] = analytics_get(f"ids=channel%3D%3D{CHANNEL_ID}&startDate={start_365}&endDate={end_date}&metrics=viewerPercentage&dimensions=ageGroup,gender", ACCESS_TOKEN)
@@ -734,7 +727,7 @@ payload = json.dumps({
   'coinlyte':coinlyte_vids,'coinbureau':coin_bureau_vids,
   'cyberscrilla':cyberscrilla_vids,'bankless':bankless_vids,
   'comments':all_comments[:200],'commentThemes':themes,
-  'totalComments':len(all_comments),'lastRefresh':TODAY,'refreshedAt':datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+  'totalComments':len(all_comments),'lastRefresh':TODAY,'refreshedAt':utc_now().strftime('%Y-%m-%dT%H:%M:%SZ'),
   'channelStats':{'subs':subs,'views':views,'vids':vids_count},
   'news':news_intelligence,
   'videoIdeas':video_ideas,
@@ -751,7 +744,7 @@ with open('assets/live-data.js','w',encoding='utf-8') as f:
 
 status_payload = {
   'status':'completed',
-  'completedAt':datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+  'completedAt':utc_now().strftime('%Y-%m-%dT%H:%M:%SZ'),
   'lastRefresh':TODAY,
   'datasets':{
     'channel': bool(coinlyte_vids),
