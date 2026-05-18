@@ -32,6 +32,22 @@ export default function handler(req, res) {
     return sendFile(res, join(root, "login.html"));
   }
 
+  if (pathname.startsWith("/assets/")) {
+    const requested = normalize(decodeURIComponent(pathname)).replace(/^(\.\.[/\\])+/, "");
+    const filePath = resolve(join(root, requested));
+    if (!filePath.startsWith(root)) {
+      res.statusCode = 403;
+      return res.end("Forbidden");
+    }
+    try {
+      return sendFile(res, filePath);
+    } catch {
+      res.statusCode = 404;
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      return res.end("Not found");
+    }
+  }
+
   if (!hasValidSession(req)) {
     res.statusCode = 302;
     res.setHeader("Location", "/login.html");
