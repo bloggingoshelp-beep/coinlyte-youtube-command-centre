@@ -25,3 +25,6 @@ alter table public.team_users enable row level security;
 
 -- Vercel API routes use SUPABASE_SERVICE_ROLE_KEY, which bypasses RLS.
 -- Keep anon/client-side access disabled; do not expose service-role keys in frontend code.
+grant usage on schema public to service_role;
+grant select, insert, update, delete on public.app_state to service_role;
+grant select, insert, update, delete on public.team_users to service_role;

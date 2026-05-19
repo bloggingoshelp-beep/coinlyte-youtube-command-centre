@@ -40,6 +40,7 @@ Important storage note:
 - Live intelligence data is refreshed into files in this repo.
 - Shared operating data lives in Supabase when `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are configured.
 - Run `supabase/schema.sql` in the Supabase SQL editor before enabling shared mode.
+- If "Automatically expose new tables" is disabled in Supabase, keep the explicit `grant ... to service_role` lines in the schema. The app only uses the service role from Vercel API routes.
 - Planner cards, brand records, team members, notifications, and dismissed items sync through `/api/board`.
 - Team users get separate login codes through `/api/team-user`; codes are hashed before storage and cannot be viewed later.
 - If Supabase is not configured, the app falls back to browser local storage.
