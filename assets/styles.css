@@ -463,6 +463,17 @@ a { color: inherit; }
 .command-move.pink { border-top-color: var(--pink); background: linear-gradient(180deg, var(--pink-soft), #fff 44%); }
 .command-move.blue { border-top-color: var(--blue); background: linear-gradient(180deg, var(--blue-soft), #fff 44%); }
 .command-move.gold { border-top-color: var(--gold); background: linear-gradient(180deg, var(--gold-soft), #fff 44%); }
+.access-note {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid #bae6fd;
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #0f4776;
+  font-size: .9rem;
+  line-height: 1.45;
+}
 .upload-spotlight {
   display: grid;
   grid-template-columns: 170px minmax(0, 1fr);

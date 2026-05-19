@@ -117,8 +117,9 @@
         category: inferCategory(video.title || "")
       }));
     }
+    const coinBureauSeed = target.competitors?.find((comp) => comp.channel === "Coin Bureau")?.latest || [];
     target.competitors = [
-      competitorFromLive("Coin Bureau", "Check daily", "Global stories to translate for Indian investors", live.coinbureau),
+      competitorFromLive("Coin Bureau", "Check daily", "Official @CoinBureau crypto narratives to localize for Indian investors", officialCoinBureauVideos(live.coinbureau, coinBureauSeed)),
       competitorFromLive("Cyber Scrilla", "Check 3x/week", "Wallet, exchange, and scam angles", live.cyberscrilla),
       competitorFromLive("Bankless", "Check weekly", "Macro, Ethereum, regulation, and institutions", live.bankless)
     ];
@@ -239,17 +240,26 @@
       }))
     };
   }
+  function officialCoinBureauVideos(videos = [], fallback = []) {
+    const badSignals = ["spirit airlines", "ireland", "openai scandal", "switzerland controls migration", "money bureau", "ukraine", "uae left opec"];
+    const titles = (videos || []).map((video) => String(video?.title || video || "").toLowerCase());
+    const looksLikeWrongChannel = titles.some((title) => badSignals.some((signal) => title.includes(signal)));
+    return videos?.length && !looksLikeWrongChannel ? videos : fallback;
+  }
   function competitorFromLive(channel, cadence, reason, videos = []) {
     return {
       channel,
       cadence,
       reason,
-      latest: videos.slice(0, 8).map((v) => ({
-        title: v.title || "Untitled",
-        days: v.days || v.age || "Fresh",
-        videoId: v.videoId || "",
-        url: v.videoId ? `https://youtube.com/watch?v=${v.videoId}` : v.url || ""
-      }))
+      latest: videos.slice(0, 8).map((v) => {
+        const title = typeof v === "string" ? v : v.title || "Untitled";
+        return {
+          title,
+          days: v.days || v.age || "Fresh",
+          videoId: v.videoId || "",
+          url: v.videoId ? `https://youtube.com/watch?v=${v.videoId}` : v.url || ""
+        };
+      })
     };
   }
   function inferCategory(title) {
@@ -801,10 +811,10 @@
       <div class="panel command-focus">
         <div class="panel-head"><div><h3>Owner Action Queue</h3><div class="panel-sub">Fast horizontal moves for the next working session.</div></div></div>
         <div class="command-move-grid">
-          ${commandMove("Research next", topIdea?.title || "Open Video Ideas", topIdea?.reason || "Pick the highest scoring opportunity now.", "ideas", "Video Ideas", "purple")}
-          ${commandMove("Comment-picked idea", commentIdea.title, commentIdea.note, "pulse", "Community Pulse", "pink")}
-          ${commandMove("Move card", nextCard?.title || "No active card", nextCard ? nextStageNudge(nextCard) : "Add a new card from ideas.", "planner", "Planner", "blue")}
-          ${commandMove("Sponsor timing", sponsorWatch?.name || "No urgent sponsor", sponsorWatch ? `${sponsorWatch.status} · ${formatDealValue(sponsorWatch)}` : "Add prospects or prepare outreach.", "brand", "Brand Deals", "gold")}
+          ${commandMove("move-research", "Research next", topIdea?.title || "Open Video Ideas", topIdea?.reason || "Pick the highest scoring opportunity now.", "ideas", "Video Ideas", "purple")}
+          ${commandMove("move-comment", "Comment-picked idea", commentIdea.title, commentIdea.note, "pulse", "Community Pulse", "pink")}
+          ${commandMove("move-card", "Move card", nextCard?.title || "No active card", nextCard ? nextStageNudge(nextCard) : "Add a new card from ideas.", "planner", "Planner", "blue")}
+          ${commandMove("move-sponsor", "Sponsor timing", sponsorWatch?.name || "No urgent sponsor", sponsorWatch ? `${sponsorWatch.status} · ${formatDealValue(sponsorWatch)}` : "Add prospects or prepare outreach.", "brand", "Brand Deals", "gold")}
         </div>
       </div>
       <div class="panel latest-upload-panel">
@@ -968,8 +978,9 @@
       note: "Review comments to pick the next audience-led video idea."
     };
   }
-  function commandMove(title, subject, note, view, action, tone) {
-    return `<div class="command-move ${tone}"><div><span>${escapeHTML(title)}</span><strong>${escapeHTML(subject)}</strong><p>${escapeHTML(note)}</p></div><button class="ghost-btn" data-command-jump="${view}" type="button">${escapeHTML(action)}</button></div>`;
+  function commandMove(key, title, subject, note, view, action, tone) {
+    if (isCommandDismissed(key)) return "";
+    return `<div class="command-move ${tone}"><div><span>${escapeHTML(title)}</span><strong>${escapeHTML(subject)}</strong><p>${escapeHTML(note)}</p></div><div class="command-card-actions"><button class="mini-link-btn" data-command-jump="${view}" type="button">${escapeHTML(action)} →</button><button class="dismiss-mini-btn" data-command-dismiss="${key}" type="button">Dismiss</button></div></div>`;
   }
   function shortcut(question, view, label, tone) {
     return `<button class="shortcut ${tone}" data-command-jump="${view}" type="button"><span>${escapeHTML(question)}</span><strong>${escapeHTML(label)}</strong></button>`;
@@ -1994,7 +2005,7 @@
     $("#modal-root").classList.remove("is-hidden");
     $("#modal-root").innerHTML = `
       <form class="modal team-member-modal" id="member-form">
-        <div class="modal-head"><div><h3>${editing ? "Edit Team Member" : "Create Team User"}</h3><div class="panel-sub">Choose exactly which boards this user can access.</div></div><button class="ghost-btn" data-close type="button">Close</button></div>
+        <div class="modal-head"><div><h3>${editing ? "Edit Team Member" : "Create Team User"}</h3><div class="panel-sub">Choose assignments, board visibility, and notification preferences.</div></div><button class="ghost-btn" data-close type="button">Close</button></div>
         <div class="form-grid">
           <label>Name<input name="name" required value="${escapeHTML(current.name || "")}" placeholder="Editor name"></label>
           <label>User ID<input name="userId" required value="${escapeHTML(current.userId || "")}" placeholder="editor01"></label>
@@ -2010,6 +2021,7 @@
         <div class="modal-section">
           <div class="section-title">🔐 Board Access</div>
           <div class="access-check-grid">${APP_ACCESS.map((item) => `<label><input name="access" type="checkbox" value="${escapeHTML(item)}" ${(current.access || []).includes(item) ? "checked" : ""}> ${escapeHTML(item)}</label>`).join("")}</div>
+          <div class="access-note">Login access codes are not stored in this browser board. For now, team members log in with the owner code you set in Vercel. Proper per-user codes require a server-side auth/data store so access cannot be bypassed from the browser.</div>
         </div>
         <div class="modal-section">
           <label class="sponsor-toggle"><input name="notifyStages" type="checkbox" ${current.notifyStages !== false ? "checked" : ""}> Notify this member when assigned card changes stage</label>
@@ -2336,7 +2348,7 @@
     const emailReady = state.teamMembers.filter((member) => normalizeChannels(member).includes("Email") && member.email).length;
     $("#team").innerHTML = `
       <section class="page-hero team-page-hero">
-        <div><p class="eyebrow">Access · Notifications · Accountability</p><h3>Team Access Control</h3><p>Control who can see each app area and who gets notified when assigned planner work moves stage.</p></div>
+        <div><p class="eyebrow">Access · Notifications · Accountability</p><h3>Team Access Control</h3><p>Save assignment profiles, board permissions, and notification preferences. Login is still protected by the owner access code until server-side team auth is added.</p></div>
         <div class="hero-stat-row">
           ${metric("Team Users", state.teamMembers.length, "Saved users")}
           ${metric("Unread", unread, "Board notifications")}
@@ -2345,7 +2357,7 @@
       </section>
       <div class="panel team-access-panel">
         <div class="panel-head">
-          <div><h3>🔐 App Access</h3><div class="panel-sub">Create user IDs and choose exactly which high-level app areas each person can open.</div></div>
+          <div><h3>🔐 App Access</h3><div class="panel-sub">User IDs are for planner assignment and future login mapping. Do not put passwords or access codes here.</div></div>
           <button class="primary-btn" data-add-member type="button">Add Team Member</button>
         </div>
         <div class="team-member-grid">${state.teamMembers.map(teamMemberCard).join("")}</div>

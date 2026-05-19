@@ -32,7 +32,7 @@ npm test
 - Blocker alerts are visible.
 - Daily action cards are visible.
 - Buttons jump to Planner, Intelligence, Team Access, and Brand Deals.
-- Dismiss buttons hide Command alerts/actions and Restore brings them back.
+- Dismiss buttons hide Command alerts/actions/Owner Action Queue cards and Restore brings them back.
 - Owner `CL` profile button opens settings; Logout routes to the login page.
 
 ## Intelligence
@@ -72,6 +72,7 @@ npm test
 - Multiple notification channels can be selected.
 - App access checkboxes can be selected.
 - Access status can be set to Active or Paused.
+- Modal explains that user IDs are assignment profiles today, not separate login access codes.
 - Notification board displays stage/assignment alerts.
 - Notification items can be opened, marked read/unread, and dismissed.
 

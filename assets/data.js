@@ -110,7 +110,7 @@ window.COINLYTE_DATA = {
     { title: "Solana price prediction: 3 AI models reveal forecasts", days: "15d ago", videoId: "RkUrPZ-VbRM", category: "AI Crypto" }
   ],
   competitors: [
-    { channel: "Coin Bureau", cadence: "Check daily", reason: "4-6 week India lead time", latest: ["Cartel Gold Hits America", "We Just Launched Money Bureau", "Why the UAE Left OPEC"] },
+    { channel: "Coin Bureau", cadence: "Check daily", reason: "Official @CoinBureau crypto narratives to localize for Indian investors", latest: ["Bitcoin macro cycle update", "Crypto regulation explainer", "Altcoin risk narrative"] },
     { channel: "Cyber Scrilla", cadence: "Check 3x/week", reason: "Cold wallet audience overlap", latest: ["AI Cracked A Bitcoin Wallet", "If You Watch Only One Cold Wallet Video", "Tangem Wallet is UNREAL"] },
     { channel: "Bankless", cadence: "Check weekly", reason: "Macro and regulation themes", latest: ["Clarity Passes", "Why North Korea Is Winning Crypto Crime", "Crypto Trades Like Nasdaq"] }
   ],

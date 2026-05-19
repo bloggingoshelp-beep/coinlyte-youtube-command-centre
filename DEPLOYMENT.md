@@ -37,4 +37,5 @@ Important storage note:
 
 - Live intelligence data is refreshed into files in this repo.
 - Planner cards, brand records, dismissed ideas, team members, and notifications currently live in browser local storage.
+- Team Access user IDs do not create separate production login codes yet. Team members can only log in with the owner access code until real server-side team auth is built.
 - Before large UI changes, export the board from Content Planner or create a backup branch.

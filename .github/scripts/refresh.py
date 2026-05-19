@@ -217,11 +217,14 @@ print("Fetching CoinLyte RSS...")
 coinlyte_vids = rss_videos(CHANNEL_ID, 10)
 
 print("Fetching Coin Bureau RSS...")
-cb_id = channel_id_for_handle('CoinBureau')
-coin_bureau_vids = rss_videos(cb_id, 8) if cb_id else []
+COIN_BUREAU_CHANNEL_ID = 'UCqK_GSMbpiV8spgD3ZGloSw'
+coin_bureau_vids = rss_videos(COIN_BUREAU_CHANNEL_ID, 8)
 if not coin_bureau_vids:
-  # Known fallback IDs
-  for cid in ['UCqK_FAkAds28_5QxK-aoqHQ', 'UCqK_FAkAds28_5QxK-aoqHQ']:
+  cb_id = channel_id_for_handle('CoinBureau')
+  coin_bureau_vids = rss_videos(cb_id, 8) if cb_id else []
+if not coin_bureau_vids:
+  # Known fallback ID for the official @CoinBureau channel.
+  for cid in [COIN_BUREAU_CHANNEL_ID]:
     coin_bureau_vids = rss_videos(cid, 8)
     if coin_bureau_vids: break
 
@@ -653,7 +656,7 @@ Top recurring comment themes:
 {chr(10).join(f'- {r}' for r in top_requests) if top_requests else '- No comment data yet'}
 
 ═══ COMPETITOR CONTENT THIS WEEK ═══
-Coin Bureau (English, global, 3.3M subs):
+Coin Bureau official @CoinBureau channel (English, global crypto narratives):
 {chr(10).join(f'- {t}' for t in cb_titles) if cb_titles else '- RSS data unavailable'}
 
 Cyber Scrilla (English, hardware wallet focus, 500K subs):
