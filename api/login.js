@@ -1,4 +1,5 @@
-import { MAX_SESSION_AGE, safeEqual, sign } from "./auth.js";
+import { APP_ACCESS, MAX_SESSION_AGE, createSessionCookie, safeEqual, verifyAccessCode } from "./auth.js";
+import { isDbConfigured, listTeamUsers } from "./db.js";
 
 function readBody(req) {
   return new Promise((resolve, reject) => {
@@ -30,12 +31,32 @@ export default async function handler(req, res) {
   const raw = await readBody(req);
   const params = new URLSearchParams(raw);
   const code = String(params.get("code") || "");
-  if (!safeEqual(code, expected)) {
+  let session = null;
+  if (safeEqual(code, expected)) {
+    session = { role: "owner", name: "Kirtish", userId: "owner", access: APP_ACCESS, iat: Date.now() };
+  } else if (isDbConfigured()) {
+    try {
+      const users = await listTeamUsers();
+      const matched = users.find((user) => user.access_status !== "Paused" && verifyAccessCode(code, user.access_code_salt, user.access_code_hash));
+      if (matched) {
+        session = {
+          role: matched.role || "Team",
+          name: matched.name,
+          userId: matched.user_id,
+          memberId: matched.id,
+          access: matched.access || ["Content Planner"],
+          iat: Date.now()
+        };
+      }
+    } catch {
+      session = null;
+    }
+  }
+  if (!session) {
     return res.redirect(302, "/login.html?error=1");
   }
 
-  const payload = Buffer.from(JSON.stringify({ role: "owner", iat: Date.now() })).toString("base64url");
-  const cookie = `${payload}.${sign(payload, secret)}`;
+  const cookie = createSessionCookie(session, secret);
   res.setHeader("Set-Cookie", `cl_session=${cookie}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${MAX_SESSION_AGE}`);
   return res.redirect(302, "/");
 }

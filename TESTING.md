@@ -9,6 +9,9 @@ node --check assets/app.js
 node --check api/refresh.js
 node --check api/refresh-status.js
 node --check api/notify.js
+node --check api/board.js
+node --check api/team-user.js
+node --check api/login.js
 npm test
 ```
 
@@ -72,9 +75,16 @@ npm test
 - Multiple notification channels can be selected.
 - App access checkboxes can be selected.
 - Access status can be set to Active or Paused.
-- Modal explains that user IDs are assignment profiles today, not separate login access codes.
+- Login access code can be set/reset from the modal when Supabase is configured.
+- A team user can log in with their own code and sees only the app areas selected in Board Access.
 - Notification board displays stage/assignment alerts.
 - Notification items can be opened, marked read/unread, and dismissed.
+
+## Shared Data
+
+- With `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` configured, Planner, Brand Deals, Team Access, notifications, and dismissed cards sync across devices.
+- Without Supabase, the app clearly falls back to local browser storage.
+- First owner login on an empty Supabase board uploads the current local board snapshot.
 
 ## Refresh
 

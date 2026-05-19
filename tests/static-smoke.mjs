@@ -9,6 +9,10 @@ const files = {
   status: await readFile(new URL("api/refresh-status.js", root), "utf8"),
   login: await readFile(new URL("api/login.js", root), "utf8"),
   auth: await readFile(new URL("api/auth.js", root), "utf8"),
+  me: await readFile(new URL("api/me.js", root), "utf8"),
+  board: await readFile(new URL("api/board.js", root), "utf8"),
+  teamUser: await readFile(new URL("api/team-user.js", root), "utf8"),
+  db: await readFile(new URL("api/db.js", root), "utf8"),
   staticGate: await readFile(new URL("api/static.js", root), "utf8"),
   workflow: await readFile(new URL(".github/workflows/refresh.yml", root), "utf8"),
   refreshScript: await readFile(new URL(".github/scripts/refresh.py", root), "utf8"),
@@ -31,7 +35,10 @@ const requiredText = [
   "scripting",
   "draftupload",
   "OWNER_ACCESS_CODE",
-  "AUTH_COOKIE_SECRET"
+  "AUTH_COOKIE_SECRET",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "Team login",
+  "Shared board"
 ];
 
 for (const text of requiredText) {
@@ -67,8 +74,17 @@ if (!files.login.includes("process.env.OWNER_ACCESS_CODE")) {
 if (!files.auth.includes("cl_session") || !files.auth.includes("timingSafeEqual")) {
   throw new Error("Auth helper must validate the signed owner cookie.");
 }
-if (!files.staticGate.includes("hasValidSession") || !files.staticGate.includes("login.html")) {
+if (!files.staticGate.includes("parseSession") || !files.staticGate.includes("login.html")) {
   throw new Error("Static gate must protect dashboard files behind login.");
+}
+if (!files.login.includes("listTeamUsers") || !files.login.includes("verifyAccessCode")) {
+  throw new Error("Login endpoint must support hashed team access codes.");
+}
+if (!files.db.includes("app_state") || !files.board.includes("requireSession") || !files.board.includes("saveAppState")) {
+  throw new Error("Board API must read/write shared Supabase app_state behind login.");
+}
+if (!files.teamUser.includes("hashAccessCode") || !files.teamUser.includes("requireOwner")) {
+  throw new Error("Team user API must hash codes and require owner access.");
 }
 if (!files.refresh.includes("requireOwner") || !files.status.includes("requireOwner")) {
   throw new Error("Refresh API endpoints must require owner access.");

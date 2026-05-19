@@ -1,7 +1,7 @@
 import { createReadStream, statSync } from "node:fs";
 import { extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { hasValidSession } from "./auth.js";
+import { parseSession } from "./auth.js";
 
 const root = resolve(fileURLToPath(new URL("../", import.meta.url)));
 const types = {
@@ -32,28 +32,12 @@ export default function handler(req, res) {
     return sendFile(res, join(root, "login.html"));
   }
 
-  if (pathname.startsWith("/assets/")) {
-    const requested = normalize(decodeURIComponent(pathname)).replace(/^(\.\.[/\\])+/, "");
-    const filePath = resolve(join(root, requested));
-    if (!filePath.startsWith(root)) {
-      res.statusCode = 403;
-      return res.end("Forbidden");
-    }
-    try {
-      return sendFile(res, filePath);
-    } catch {
-      res.statusCode = 404;
-      res.setHeader("Content-Type", "text/plain; charset=utf-8");
-      return res.end("Not found");
-    }
-  }
-
-  if (!hasValidSession(req)) {
+  const session = parseSession(req);
+  if (!session) {
     res.statusCode = 302;
     res.setHeader("Location", "/login.html");
     return res.end();
   }
-
   const requested = normalize(decodeURIComponent(pathname)).replace(/^(\.\.[/\\])+/, "");
   const filePath = resolve(join(root, requested));
   if (!filePath.startsWith(root)) {

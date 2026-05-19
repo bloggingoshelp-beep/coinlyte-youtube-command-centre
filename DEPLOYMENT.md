@@ -11,6 +11,8 @@ Required Vercel environment variables:
 - `GH_REPO`: repository name for this command centre, for example `coinlyte-youtube-command-centre`.
 - `GH_WORKFLOW`: optional, defaults to `refresh.yml`.
 - `GH_REF`: optional, defaults to `main`.
+- `SUPABASE_URL`: Supabase project URL for shared board storage and team login.
+- `SUPABASE_SERVICE_ROLE_KEY`: Supabase service-role key, used only by Vercel API routes. Never expose it in frontend files.
 - `RESEND_API_KEY`: optional, enables email notifications.
 - `NOTIFY_FROM`: optional email sender, for example `CoinLyte Command <notify@yourdomain.com>`.
 
@@ -36,6 +38,9 @@ Refresh flow:
 Important storage note:
 
 - Live intelligence data is refreshed into files in this repo.
-- Planner cards, brand records, dismissed ideas, team members, and notifications currently live in browser local storage.
-- Team Access user IDs do not create separate production login codes yet. Team members can only log in with the owner access code until real server-side team auth is built.
+- Shared operating data lives in Supabase when `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are configured.
+- Run `supabase/schema.sql` in the Supabase SQL editor before enabling shared mode.
+- Planner cards, brand records, team members, notifications, and dismissed items sync through `/api/board`.
+- Team users get separate login codes through `/api/team-user`; codes are hashed before storage and cannot be viewed later.
+- If Supabase is not configured, the app falls back to browser local storage.
 - Before large UI changes, export the board from Content Planner or create a backup branch.

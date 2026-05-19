@@ -25,6 +25,15 @@
   const BRAND_TYPES = ["Fixed Fee", "Product Review", "Affiliate", "Dedicated Integration", "Mention", "Revenue Share", "Barter", "Other"];
   const CURRENCIES = ["INR", "USD"];
   const APP_ACCESS = ["Command", "Analytics", "Channel Intelligence", "Content Planner", "Brand Deals", "Team Access", "Refresh"];
+  const VIEW_ACCESS = {
+    overview: "Command",
+    analytics: "Analytics",
+    intelligence: "Channel Intelligence",
+    planner: "Content Planner",
+    brand: "Brand Deals",
+    team: "Team Access",
+    refresh: "Refresh"
+  };
   const NOTIFICATION_CHANNELS = ["In-app", "Email", "WhatsApp", "Slack", "Telegram"];
   const DEFAULT_TEAM = [
     { id: "owner-kirtish", name: "Kirtish", role: "Owner", userId: "kirtish", email: "", channels: ["In-app"], access: APP_ACCESS, notifyStages: true }
@@ -63,8 +72,11 @@
     dismissedIdeas: store.get("cl_dismissed_ideas_v1", []),
     dismissedCommand: store.get("cl_dismissed_command_v1", []),
     teamMembers: normalizeTeamMembers(store.get("cl_team_members_v1", DEFAULT_TEAM)),
-    notifications: store.get("cl_notifications_v1", [])
+    notifications: store.get("cl_notifications_v1", []),
+    session: { role: "owner", name: "Local Owner", userId: "local", access: APP_ACCESS },
+    cloud: { ready: false, loading: false, mode: "local" }
   };
+  let cloudSaveTimer = null;
 
   function $(selector, root = document) {
     return root.querySelector(selector);
@@ -349,26 +361,87 @@
       return withId({ ...card, stage: card.stage || "ideas", checks, researchBrief, editorNotes, sourceLinks: mergedLinks });
     });
   }
+  function cleanTeamMembers(members = state.teamMembers) {
+    return normalizeTeamMembers(members).map(({ accessCode, ...member }) => member);
+  }
+  function boardSnapshot() {
+    return {
+      pipeline: state.pipeline,
+      hubLinks: state.hubLinks,
+      brands: state.brands,
+      teamMembers: cleanTeamMembers(),
+      notifications: state.notifications.slice(0, 80),
+      dismissedIdeas: state.dismissedIdeas,
+      dismissedCommand: state.dismissedCommand
+    };
+  }
+  function saveLocalSnapshot() {
+    store.set("cl_pipeline_v4", state.pipeline);
+    store.set("cl_hub_links_v3", state.hubLinks);
+    store.set("cl_brands_v3", state.brands);
+    store.set("cl_dismissed_ideas_v1", state.dismissedIdeas);
+    store.set("cl_dismissed_command_v1", state.dismissedCommand);
+    store.set("cl_team_members_v1", cleanTeamMembers());
+    store.set("cl_notifications_v1", state.notifications.slice(0, 80));
+  }
+  function applyBoardData(board = {}) {
+    if (Array.isArray(board.pipeline)) state.pipeline = normalizePipeline(board.pipeline);
+    if (Array.isArray(board.hubLinks)) state.hubLinks = board.hubLinks.map(withId);
+    if (Array.isArray(board.brands)) state.brands = board.brands.map(withId);
+    if (Array.isArray(board.teamMembers)) state.teamMembers = cleanTeamMembers(board.teamMembers);
+    if (Array.isArray(board.notifications)) state.notifications = board.notifications.slice(0, 80);
+    if (Array.isArray(board.dismissedIdeas)) state.dismissedIdeas = board.dismissedIdeas;
+    if (Array.isArray(board.dismissedCommand)) state.dismissedCommand = board.dismissedCommand;
+    saveLocalSnapshot();
+  }
+  function scheduleCloudSave() {
+    if (!state.cloud.ready || state.cloud.loading) return;
+    clearTimeout(cloudSaveTimer);
+    cloudSaveTimer = setTimeout(() => persistBoardNow(), 450);
+  }
+  async function persistBoardNow() {
+    if (!state.cloud.ready || state.cloud.loading) return;
+    try {
+      setSync("Saving shared board...");
+      const res = await fetch("/api/board", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(boardSnapshot())
+      });
+      if (!res.ok) throw new Error("Cloud save failed");
+      setSync("Shared board saved");
+    } catch {
+      setSync("Local save only");
+    }
+  }
   function savePipeline() {
     store.set("cl_pipeline_v4", state.pipeline);
+    scheduleCloudSave();
   }
   function saveHub() {
     store.set("cl_hub_links_v3", state.hubLinks);
+    scheduleCloudSave();
   }
   function saveBrands() {
     store.set("cl_brands_v3", state.brands);
+    scheduleCloudSave();
   }
   function saveDismissedIdeas() {
     store.set("cl_dismissed_ideas_v1", state.dismissedIdeas);
+    scheduleCloudSave();
   }
   function saveDismissedCommand() {
     store.set("cl_dismissed_command_v1", state.dismissedCommand);
+    scheduleCloudSave();
   }
   function saveTeam() {
+    state.teamMembers = cleanTeamMembers();
     store.set("cl_team_members_v1", state.teamMembers);
+    scheduleCloudSave();
   }
   function saveNotifications() {
     store.set("cl_notifications_v1", state.notifications.slice(0, 80));
+    scheduleCloudSave();
   }
   function normalizeTeamMembers(members) {
     return (members || DEFAULT_TEAM).map((member) => withId({
@@ -674,6 +747,57 @@
       refresh: "Refresh Control"
     }[view];
   }
+  function hasAppAccess(area) {
+    if (!area) return true;
+    return state.session?.role === "owner" || (state.session?.access || []).includes(area);
+  }
+  function firstAllowedView() {
+    const found = Object.entries(VIEW_ACCESS).find(([, area]) => hasAppAccess(area));
+    return found?.[0] || "overview";
+  }
+  function applyAccessNavigation() {
+    $all(".nav-btn").forEach((btn) => {
+      const area = VIEW_ACCESS[btn.dataset.view];
+      btn.classList.toggle("is-hidden", !hasAppAccess(area));
+    });
+    $("#refresh-now")?.classList.toggle("is-hidden", !hasAppAccess("Refresh"));
+    $("#owner-menu").textContent = state.session?.role === "owner" ? "CL" : (state.session?.name || "T").slice(0, 2).toUpperCase();
+  }
+  async function bootstrapCloud() {
+    if (state.cloud.loading) return;
+    state.cloud.loading = true;
+    try {
+      setSync("Checking shared board...");
+      const sessionRes = await fetch("/api/me", { headers: { Accept: "application/json" } });
+      if (!sessionRes.ok) throw new Error("No server session");
+      const session = await sessionRes.json();
+      if (session.authenticated) {
+        state.session = session;
+        applyAccessNavigation();
+        if (!hasAppAccess(VIEW_ACCESS[state.view])) state.view = firstAllowedView();
+      }
+      const boardRes = await fetch("/api/board", { headers: { Accept: "application/json" } });
+      const board = await boardRes.json().catch(() => ({}));
+      if (!boardRes.ok || !board.ok) throw new Error(board.error || "Shared board unavailable");
+      state.cloud.ready = true;
+      state.cloud.mode = "cloud";
+      if (board.empty) {
+        state.cloud.loading = false;
+        await persistBoardNow();
+      } else {
+        applyBoardData(board.data || {});
+      }
+      setSync("Shared board synced");
+      render();
+    } catch {
+      state.cloud.ready = false;
+      state.cloud.mode = "local";
+      setSync("Local board");
+    } finally {
+      state.cloud.loading = false;
+      applyAccessNavigation();
+    }
+  }
   function setView(view) {
     if (["ideas", "pulse", "market"].includes(view)) {
       state.intelligenceTab = view === "pulse" ? "community" : view;
@@ -682,6 +806,11 @@
     if (view === "calendar") {
       state.plannerTab = view;
       view = "planner";
+    }
+    const area = VIEW_ACCESS[view];
+    if (!hasAppAccess(area)) {
+      toast(`No access to ${area}.`);
+      view = firstAllowedView();
     }
     state.view = view;
     $all(".nav-btn").forEach((btn) => btn.classList.toggle("active", btn.dataset.view === view));
@@ -2021,7 +2150,12 @@
         <div class="modal-section">
           <div class="section-title">🔐 Board Access</div>
           <div class="access-check-grid">${APP_ACCESS.map((item) => `<label><input name="access" type="checkbox" value="${escapeHTML(item)}" ${(current.access || []).includes(item) ? "checked" : ""}> ${escapeHTML(item)}</label>`).join("")}</div>
-          <div class="access-note">Login access codes are not stored in this browser board. For now, team members log in with the owner code you set in Vercel. Proper per-user codes require a server-side auth/data store so access cannot be bypassed from the browser.</div>
+          <div class="access-note">With Supabase configured, these permissions control the tabs this user can open after login. Without Supabase, they remain assignment preferences only.</div>
+        </div>
+        <div class="modal-section">
+          <div class="section-title">🔑 Login Access Code</div>
+          <label>Set or reset team login code<input name="accessCode" type="password" autocomplete="new-password" placeholder="${editing ? "Leave blank to keep current code" : "Required for this user to log in separately"}"></label>
+          <div class="access-note">The code is sent to the Vercel API and stored in Supabase as a hash. It is never saved in browser local storage and cannot be viewed later.</div>
         </div>
         <div class="modal-section">
           <label class="sponsor-toggle"><input name="notifyStages" type="checkbox" ${current.notifyStages !== false ? "checked" : ""}> Notify this member when assigned card changes stage</label>
@@ -2032,6 +2166,7 @@
     $("#member-form").addEventListener("submit", (event) => {
       event.preventDefault();
       const form = new FormData(event.currentTarget);
+      const accessCode = String(form.get("accessCode") || "").trim();
       const next = withId({
         id: current.id,
         name: form.get("name").trim(),
@@ -2048,10 +2183,28 @@
       if (editing) state.teamMembers = state.teamMembers.map((item) => item.id === current.id ? next : item);
       else state.teamMembers.unshift(next);
       saveTeam();
+      if (accessCode) syncTeamMemberAccess(next, accessCode);
       closeModal();
       state.view === "team" ? renderTeam() : renderPlanner();
       toast(editing ? "Team access updated." : "Team user created.");
     });
+  }
+  async function syncTeamMemberAccess(member, accessCode) {
+    if (!state.cloud.ready) {
+      toast("Team code saved locally? No. Configure Supabase first, then reset this user code.");
+      return;
+    }
+    try {
+      const res = await fetch("/api/team-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ member, accessCode })
+      });
+      if (!res.ok) throw new Error("Team login save failed");
+      toast(`${member.name} can now log in with their own code.`);
+    } catch {
+      toast("Team access code was not saved. Check Supabase setup and try again.");
+    }
   }
   function deleteTeamMember(id) {
     const member = state.teamMembers.find((item) => item.id === id);
@@ -2348,7 +2501,7 @@
     const emailReady = state.teamMembers.filter((member) => normalizeChannels(member).includes("Email") && member.email).length;
     $("#team").innerHTML = `
       <section class="page-hero team-page-hero">
-        <div><p class="eyebrow">Access · Notifications · Accountability</p><h3>Team Access Control</h3><p>Save assignment profiles, board permissions, and notification preferences. Login is still protected by the owner access code until server-side team auth is added.</p></div>
+        <div><p class="eyebrow">Access · Notifications · Accountability</p><h3>Team Access Control</h3><p>Save assignment profiles, board permissions, notification preferences, and separate team login codes once Supabase is connected.</p></div>
         <div class="hero-stat-row">
           ${metric("Team Users", state.teamMembers.length, "Saved users")}
           ${metric("Unread", unread, "Board notifications")}
@@ -2357,7 +2510,7 @@
       </section>
       <div class="panel team-access-panel">
         <div class="panel-head">
-          <div><h3>🔐 App Access</h3><div class="panel-sub">User IDs are for planner assignment and future login mapping. Do not put passwords or access codes here.</div></div>
+          <div><h3>🔐 App Access</h3><div class="panel-sub">Create user IDs, choose allowed app areas, and set/reset login codes from the edit modal.</div></div>
           <button class="primary-btn" data-add-member type="button">Add Team Member</button>
         </div>
         <div class="team-member-grid">${state.teamMembers.map(teamMemberCard).join("")}</div>
@@ -2815,12 +2968,22 @@
         </div>
         <div class="grid cols-2">
           <div class="list-card">
+            <span class="tag teal">☁ Shared board</span>
+            <h4>${state.cloud.ready ? "Supabase connected" : "Local browser mode"}</h4>
+            <p>${state.cloud.ready ? "Planner, brands, team users, notifications, and dismissed items are syncing through Vercel APIs." : "Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel to make this board shared across devices."}</p>
+          </div>
+          <div class="list-card">
             <span class="tag green">🔐 Owner login code</span>
             <h4>Managed in Vercel</h4>
             <p>To reset the owner login code, change <strong>OWNER_ACCESS_CODE</strong> in Vercel and redeploy. No GitHub, YouTube, access-code, or API secrets are exposed inside frontend files.</p>
             <div class="card-actions">
               <a class="ghost-btn" href="https://vercel.com/kirtish-vyas-projects/coinlyte-youtube-command-centre/settings/environment-variables" target="_blank" rel="noreferrer">Open Vercel Env</a>
             </div>
+          </div>
+          <div class="list-card">
+            <span class="tag blue">👥 Team login</span>
+            <h4>Managed in Team Access</h4>
+            <p>After Supabase is connected, create a team user and set their login code. Their code opens only the tabs selected in Board Access.</p>
           </div>
           <div class="list-card">
             <span class="tag red">🚪 Session</span>
@@ -2875,7 +3038,9 @@
   function unlock() {
     $("#gate").classList.add("is-hidden");
     $("#app").classList.remove("is-hidden");
+    applyAccessNavigation();
     render();
+    bootstrapCloud();
   }
   function init() {
     initLogin();

@@ -41,7 +41,7 @@ CoinLyte Command Centre is not a generic dashboard. It is the control room for o
 - Dismissed Command dashboard cards stored in `cl_dismissed_command_v1`.
 - Source links and research briefs when adding ideas to Planner.
 - Owner login/access code must stay server-side in Vercel `OWNER_ACCESS_CODE`; do not hardcode it in frontend files.
-- Team Access users are assignment/notification profiles only today. Do not store team passwords in localStorage; real per-user login needs server-side auth or a database-backed identity layer.
+- Supabase-backed Team Access users can log in with separate hashed access codes. Do not store team passwords in localStorage or frontend files.
 
 ## Design Direction
 
@@ -58,8 +58,8 @@ The preferred style is Claude-inspired: premium cards, strong color coding, clea
 
 ## Good Future Improvements
 
-- Real database for planner/brand/team data instead of browser-only storage.
-- True per-user login instead of assignment-only Team Access profiles.
+- Supabase project setup in production Vercel environment variables.
+- Granular server-side data filtering for every future app module as the app grows.
 - Email provider/domain setup for production notifications.
 - Export/import backup stored server-side.
 - More automated browser tests.
@@ -71,4 +71,5 @@ The preferred style is Claude-inspired: premium cards, strong color coding, clea
 - Command dashboard cards, quick actions, and Owner Action Queue cards can be dismissed and restored.
 - Notification Board supports open card, mark read/unread, and dismiss.
 - Owner `CL` profile button opens owner settings and logout.
-- Team users include an access status, app-area permissions, and multiple notification channels.
+- Team users include an access status, app-area permissions, multiple notification channels, and optional hashed login codes.
+- Shared board API stores planner, brand, team, notification, and dismissed-item state in Supabase when configured.
