@@ -74,9 +74,10 @@
     teamMembers: normalizeTeamMembers(store.get("cl_team_members_v1", DEFAULT_TEAM)),
     notifications: store.get("cl_notifications_v1", []),
     session: { role: "owner", name: "Local Owner", userId: "local", access: APP_ACCESS },
-    cloud: { ready: false, loading: false, mode: "local" }
+    cloud: { ready: false, loading: false, mode: "local", dirty: false, lastSyncedAt: "" }
   };
   let cloudSaveTimer = null;
+  let cloudPollTimer = null;
 
   function $(selector, root = document) {
     return root.querySelector(selector);
@@ -396,11 +397,12 @@
   }
   function scheduleCloudSave() {
     if (!state.cloud.ready || state.cloud.loading) return;
+    state.cloud.dirty = true;
     clearTimeout(cloudSaveTimer);
     cloudSaveTimer = setTimeout(() => persistBoardNow(), 450);
   }
-  async function persistBoardNow() {
-    if (!state.cloud.ready || state.cloud.loading) return;
+  async function persistBoardNow({ force = false } = {}) {
+    if (!state.cloud.ready || (state.cloud.loading && !force)) return false;
     try {
       setSync("Saving shared board...");
       const res = await fetch("/api/board", {
@@ -409,9 +411,13 @@
         body: JSON.stringify(boardSnapshot())
       });
       if (!res.ok) throw new Error("Cloud save failed");
+      state.cloud.dirty = false;
+      state.cloud.lastSyncedAt = new Date().toISOString();
       setSync("Shared board saved");
+      return true;
     } catch {
       setSync("Local save only");
+      return false;
     }
   }
   function savePipeline() {
@@ -761,13 +767,41 @@
       btn.classList.toggle("is-hidden", !hasAppAccess(area));
     });
     $("#refresh-now")?.classList.toggle("is-hidden", !hasAppAccess("Refresh"));
+    $("#sync-board")?.classList.toggle("is-hidden", !state.session);
     $("#owner-menu").textContent = state.session?.role === "owner" ? "CL" : (state.session?.name || "T").slice(0, 2).toUpperCase();
   }
   async function bootstrapCloud() {
+    await pullSharedBoard("board", { label: "Checking shared board...", success: "Shared board synced", fail: "Local board", renderAfter: true, quiet: false });
+    startCloudPolling();
+  }
+  function syncScopeLabel(scope = "board") {
+    return {
+      board: "Board",
+      planner: "Planner",
+      brand: "Brand Deals",
+      team: "Team Access"
+    }[scope] || "Board";
+  }
+  function isModalOpen() {
+    return $("#modal-root") && !$("#modal-root").classList.contains("is-hidden");
+  }
+  async function syncSharedBoard(scope = "board") {
+    clearTimeout(cloudSaveTimer);
+    if (state.cloud.ready && state.cloud.dirty) await persistBoardNow({ force: true });
+    await pullSharedBoard(scope, {
+      label: `Syncing ${syncScopeLabel(scope)}...`,
+      success: `${syncScopeLabel(scope)} synced`,
+      fail: "Board sync unavailable",
+      renderAfter: true,
+      quiet: false
+    });
+  }
+  async function pullSharedBoard(scope = "board", options = {}) {
+    const { label = "Checking shared board...", success = "Shared board synced", fail = "Local board", renderAfter = true, quiet = false } = options;
     if (state.cloud.loading) return;
     state.cloud.loading = true;
     try {
-      setSync("Checking shared board...");
+      if (!quiet) setSync(label);
       const sessionRes = await fetch("/api/me", { headers: { Accept: "application/json" } });
       if (!sessionRes.ok) throw new Error("No server session");
       const session = await sessionRes.json();
@@ -787,16 +821,33 @@
       } else {
         applyBoardData(board.data || {});
       }
-      setSync("Shared board synced");
-      render();
+      state.cloud.lastSyncedAt = new Date().toISOString();
+      setSync(success);
+      if (renderAfter) render();
     } catch {
       state.cloud.ready = false;
       state.cloud.mode = "local";
-      setSync("Local board");
+      setSync(fail);
+      if (!quiet) toast(`${syncScopeLabel(scope)} sync could not reach Supabase yet.`);
     } finally {
       state.cloud.loading = false;
       applyAccessNavigation();
     }
+  }
+  function startCloudPolling() {
+    if (cloudPollTimer) return;
+    cloudPollTimer = setInterval(() => {
+      if (!state.cloud.ready || state.cloud.dirty || isModalOpen() || document.visibilityState !== "visible") return;
+      pullSharedBoard("board", { success: "Shared board synced", fail: "Local board", renderAfter: true, quiet: true });
+    }, 45000);
+    window.addEventListener("focus", () => {
+      if (!state.cloud.ready || state.cloud.dirty || isModalOpen()) return;
+      pullSharedBoard("board", { success: "Shared board synced", fail: "Local board", renderAfter: true, quiet: true });
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible" || !state.cloud.ready || state.cloud.dirty || isModalOpen()) return;
+      pullSharedBoard("board", { success: "Shared board synced", fail: "Local board", renderAfter: true, quiet: true });
+    });
   }
   function setView(view) {
     if (["ideas", "pulse", "market"].includes(view)) {
@@ -1868,6 +1919,7 @@
         <div class="panel-head">
           <div><h3>Video Pipeline Board</h3><div class="panel-sub">Cards added from Intelligence carry original source links and research notes.</div></div>
           <div class="card-actions">
+            <button class="ghost-btn sync-board-btn" data-sync-scope="planner" type="button">Sync Planner</button>
             <button class="ghost-btn" data-backup-board type="button">Backup Board</button>
             <button class="ghost-btn" data-import-board type="button">Import Backup</button>
             <input class="is-hidden" id="planner-backup-file" type="file" accept="application/json">
@@ -1903,6 +1955,7 @@
       renderPlanner();
     }));
     $("[data-new-card]").addEventListener("click", () => openCardModal());
+    $("[data-sync-scope]")?.addEventListener("click", (event) => syncSharedBoard(event.currentTarget.dataset.syncScope));
     $("[data-clear-published]").addEventListener("click", clearPublished);
     $("[data-backup-board]")?.addEventListener("click", backupBoard);
     $("[data-import-board]")?.addEventListener("click", () => $("#planner-backup-file")?.click());
@@ -2096,6 +2149,7 @@
   }
   function bindTeamAccess() {
     $("[data-add-member]")?.addEventListener("click", () => openTeamMemberModal());
+    $all("[data-sync-scope]").forEach((btn) => btn.addEventListener("click", () => syncSharedBoard(btn.dataset.syncScope)));
     $all("[data-edit-member]").forEach((btn) => btn.addEventListener("click", () => openTeamMemberModal(state.teamMembers.find((member) => member.id === btn.dataset.editMember))));
     $all("[data-delete-member]").forEach((btn) => btn.addEventListener("click", () => deleteTeamMember(btn.dataset.deleteMember)));
     $("[data-clear-notifications]")?.addEventListener("click", () => {
@@ -2511,7 +2565,10 @@
       <div class="panel team-access-panel">
         <div class="panel-head">
           <div><h3>🔐 App Access</h3><div class="panel-sub">Create user IDs, choose allowed app areas, and set/reset login codes from the edit modal.</div></div>
-          <button class="primary-btn" data-add-member type="button">Add Team Member</button>
+          <div class="card-actions">
+            <button class="ghost-btn sync-board-btn" data-sync-scope="team" type="button">Sync Team</button>
+            <button class="primary-btn" data-add-member type="button">Add Team Member</button>
+          </div>
         </div>
         <div class="team-member-grid">${state.teamMembers.map(teamMemberCard).join("")}</div>
       </div>
@@ -2608,6 +2665,7 @@
         <div class="panel-head">
           <div><h3>Brand Directory</h3><div class="panel-sub">Record website, communication channel, owner, and notes before it becomes a deal.</div></div>
           <div class="card-actions">
+            <button class="ghost-btn sync-board-btn" data-sync-scope="brand" type="button">Sync Brands</button>
             <button class="ghost-btn" data-backup-brands type="button">Backup Brands</button>
             <button class="ghost-btn" data-import-brands type="button">Import Backup</button>
             <input class="is-hidden" id="brand-backup-file" type="file" accept="application/json">
@@ -2628,6 +2686,7 @@
       <div class="panel-head">
         <div><h3>Deal Board</h3><div class="panel-sub">Track progress only after a brand becomes an active sponsorship opportunity.</div></div>
         <div class="card-actions">
+          <button class="ghost-btn sync-board-btn" data-sync-scope="brand" type="button">Sync Brands</button>
           <button class="ghost-btn" data-backup-brands type="button">Backup Brands</button>
           <button class="ghost-btn" data-import-brands type="button">Import Backup</button>
           <input class="is-hidden" id="brand-backup-file" type="file" accept="application/json">
@@ -2646,6 +2705,7 @@
   }
   function bindBrandButtons() {
     $("[data-add-brand]")?.addEventListener("click", () => openBrandModal());
+    $all("[data-sync-scope]").forEach((btn) => btn.addEventListener("click", () => syncSharedBoard(btn.dataset.syncScope)));
     $("[data-backup-brands]")?.addEventListener("click", backupBrands);
     $("[data-import-brands]")?.addEventListener("click", () => $("#brand-backup-file")?.click());
     $("#brand-backup-file")?.addEventListener("change", importBrandBackup);
@@ -3045,6 +3105,7 @@
   function init() {
     initLogin();
     $all(".nav-btn").forEach((btn) => btn.addEventListener("click", () => setView(btn.dataset.view)));
+    $("#sync-board")?.addEventListener("click", () => syncSharedBoard("board"));
     $("#refresh-now").addEventListener("click", () => {
       setView("refresh");
       triggerRefresh();

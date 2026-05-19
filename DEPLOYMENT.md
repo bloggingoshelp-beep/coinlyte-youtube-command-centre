@@ -35,6 +35,13 @@ Refresh flow:
 5. The workflow commits `assets/live-data.js` and `assets/refresh-status.json`.
 6. The deploy hook publishes the refreshed dashboard.
 
+Board sync flow:
+
+1. The dashboard calls `/api/board`.
+2. Vercel reads/writes Supabase `app_state`.
+3. Sync Board, Sync Planner, Sync Brands, and Sync Team only refresh shared operating data.
+4. These board sync actions do not trigger GitHub Actions, YouTube API calls, RSS fetches, or Claude idea generation.
+
 Important storage note:
 
 - Live intelligence data is refreshed into files in this repo.

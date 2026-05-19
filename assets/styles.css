@@ -189,6 +189,8 @@ a { color: inherit; }
 .primary-btn { background: linear-gradient(135deg, var(--ink), #2d3f6b); color: #fff; box-shadow: 0 8px 18px rgba(26, 39, 68, .14); }
 .primary-btn:hover { background: linear-gradient(135deg, #22345c, #6c5ce7); }
 .ghost-btn { border-color: var(--line); background: var(--panel); color: var(--ink); }
+.sync-board-btn { border-color: #b8def6; background: #eef8ff; color: #0f5f8d; }
+.sync-board-btn:hover { border-color: #4aa3df; background: #dff2ff; }
 .danger-btn { background: #fff2f2; border-color: #f3c4c4; color: #a92727; }
 .sync-pill {
   min-height: 34px;

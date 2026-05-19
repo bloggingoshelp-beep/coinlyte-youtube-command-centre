@@ -10,6 +10,7 @@ Private operating dashboard for the CoinLyte YouTube business. This repo is inte
 - Tracks Brand Deals and sponsor records.
 - Supports Team Access, app-area permissions, hashed team login codes via Supabase, in-app notifications with dismiss/read controls, and optional email notifications.
 - Provides owner reliability controls: planner backup/import, brand backup/import, owner settings, and logout.
+- Separates lightweight board sync from the full live-data refresh: Sync Board pulls shared Planner, Brand Deals, Team Access, notifications, and dismissals without rebuilding YouTube/news/comment intelligence.
 - Runs a refresh workflow through Vercel API + GitHub Actions.
 
 ## Main App Areas

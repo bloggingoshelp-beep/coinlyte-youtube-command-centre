@@ -59,6 +59,7 @@ npm test
 - Editor reference source can be added with title and URL.
 - Source buttons open in a new tab.
 - Moving stages creates notifications for assigned team members.
+- Sync Planner pulls shared board changes without triggering the live-data refresh workflow.
 
 ## Brand Deals
 
@@ -68,6 +69,7 @@ npm test
 - Brand cards remain color coded by status.
 - Backup Brands downloads JSON.
 - Import Backup asks for confirmation before replacing brand records.
+- Sync Brands pulls shared brand changes without triggering the live-data refresh workflow.
 
 ## Team Access
 
@@ -77,12 +79,14 @@ npm test
 - Access status can be set to Active or Paused.
 - Login access code can be set/reset from the modal when Supabase is configured.
 - A team user can log in with their own code and sees only the app areas selected in Board Access.
+- Sync Team pulls shared users and notifications without triggering the live-data refresh workflow.
 - Notification board displays stage/assignment alerts.
 - Notification items can be opened, marked read/unread, and dismissed.
 
 ## Shared Data
 
 - With `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` configured, Planner, Brand Deals, Team Access, notifications, and dismissed cards sync across devices.
+- Topbar Sync Board refreshes shared board state only; Refresh Live Data triggers the full GitHub Actions intelligence pipeline.
 - Without Supabase, the app clearly falls back to local browser storage.
 - First owner login on an empty Supabase board uploads the current local board snapshot.
 
