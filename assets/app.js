@@ -989,10 +989,11 @@
     const targetStatus = commandTargetStatus(nextCard);
     const ownerName = nextCard?.assignedTo ? teamMemberName(nextCard.assignedTo) : "";
     const sponsorWatch = activeBrands[0];
+    const commandLabel = state.session?.role === "owner" ? "daily owner dashboard" : "team command workspace";
     $("#overview").innerHTML = `
       <div class="command-hero">
         <div>
-          <p class="eyebrow">CoinLyte OS · daily owner dashboard</p>
+          <p class="eyebrow">CoinLyte OS · ${commandLabel}</p>
           <h3>CoinLyte Command Centre</h3>
           <p>Open this first: decide today's video move, catch blockers, assign the right person, and jump straight into the app area where the work happens.</p>
           <div class="hero-chips">
@@ -3214,6 +3215,8 @@
   function render() {
     $("#side-refresh").textContent = new Date(data.refreshedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
     $("#side-refresh-mode").textContent = state.refreshJob?.status || "Latest cached build";
+    const dashboardEyebrow = $("#dashboard-eyebrow");
+    if (dashboardEyebrow) dashboardEyebrow.textContent = state.session?.role === "owner" ? "Owner dashboard" : "Team dashboard";
     updateNotificationBadge();
     if (state.view === "overview") renderOverview();
     if (state.view === "analytics") renderAnalytics();
