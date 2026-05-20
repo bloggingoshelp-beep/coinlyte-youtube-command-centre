@@ -16,13 +16,13 @@ CoinLyte Command Centre is not a generic dashboard. It is the control room for o
 ## Code Map
 
 - `index.html`: app shell and asset loading.
-- `login.html`: access-code screen.
+- `login.html`: User ID plus access-code screen with CoinLyte logo branding.
 - `assets/app.js`: main application logic and rendering.
 - `assets/styles.css`: all UI styling.
 - `assets/data.js`: seed/default data.
 - `assets/live-data.js`: generated live data.
 - `api/static.js`: private static file serving behind login.
-- `api/login.js` / `api/logout.js`: owner access session.
+- `api/login.js` / `api/logout.js`: owner and team access sessions. Owner login requires User ID `owner` or `kirtish` plus the owner code.
 - `api/refresh.js`: starts GitHub Actions refresh.
 - `api/refresh-status.js`: checks refresh run status.
 - `api/notify.js`: optional email notification endpoint.
@@ -41,7 +41,7 @@ CoinLyte Command Centre is not a generic dashboard. It is the control room for o
 - Dismissed Command dashboard cards stored in `cl_dismissed_command_v1`.
 - Source links and research briefs when adding ideas to Planner.
 - Owner login/access code must stay server-side in Vercel `OWNER_ACCESS_CODE`; do not hardcode it in frontend files.
-- Supabase-backed Team Access users can log in with separate hashed access codes. Do not store team passwords in localStorage or frontend files.
+- Supabase-backed Team Access users can log in with their User ID plus separate hashed access codes. Do not store team passwords in localStorage or frontend files.
 
 ## Design Direction
 
@@ -71,5 +71,5 @@ The preferred style is Claude-inspired: premium cards, strong color coding, clea
 - Command dashboard cards, quick actions, and Owner Action Queue cards can be dismissed and restored.
 - Notification Board supports open card, mark read/unread, and dismiss.
 - Owner `CL` profile button opens owner settings and logout.
-- Team users include an access status, app-area permissions, multiple notification channels, and optional hashed login codes.
+- Team users include an access status, app-area permissions, multiple notification channels, and optional hashed login codes. Already logged-in team users are re-validated against Supabase during sync/reload, so paused users or changed access should take effect without editing code.
 - Shared board API stores planner, brand, team, notification, and dismissed-item state in Supabase when configured.

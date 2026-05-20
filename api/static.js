@@ -33,7 +33,7 @@ export default function handler(req, res) {
   }
 
   const session = parseSession(req);
-  if (!session) {
+  if (!session && !pathname.startsWith("/assets/brand/")) {
     res.statusCode = 302;
     res.setHeader("Location", "/login.html");
     return res.end();

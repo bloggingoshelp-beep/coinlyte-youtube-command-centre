@@ -31,13 +31,17 @@ export default async function handler(req, res) {
   const raw = await readBody(req);
   const params = new URLSearchParams(raw);
   const code = String(params.get("code") || "");
+  const userId = String(params.get("userId") || "").trim().toLowerCase();
   let session = null;
-  if (safeEqual(code, expected)) {
+  if ((userId === "owner" || userId === "kirtish") && safeEqual(code, expected)) {
     session = { role: "owner", name: "Kirtish", userId: "owner", access: APP_ACCESS, iat: Date.now() };
   } else if (isDbConfigured()) {
     try {
       const users = await listTeamUsers();
-      const matched = users.find((user) => user.access_status !== "Paused" && verifyAccessCode(code, user.access_code_salt, user.access_code_hash));
+      const matched = users.find((user) => {
+        const matchesUser = String(user.user_id || "").toLowerCase() === userId;
+        return matchesUser && user.access_status !== "Paused" && verifyAccessCode(code, user.access_code_salt, user.access_code_hash);
+      });
       if (matched) {
         session = {
           role: matched.role || "Team",

@@ -9,6 +9,7 @@ Private operating dashboard for the CoinLyte YouTube business. This repo is inte
 - Converts ideas into Content Planner cards with source links, locked research briefs, editor reference sources, assignees, target dates, and stage movement.
 - Tracks Brand Deals and sponsor records.
 - Supports Team Access, app-area permissions, hashed team login codes via Supabase, in-app notifications with dismiss/read controls, and optional email notifications.
+- Production login now uses a User ID plus access code. Owners use `owner` or `kirtish` as the User ID; team users use the User ID created in Team Access.
 - Provides owner reliability controls: planner backup/import, brand backup/import, owner settings, and logout.
 - Separates lightweight board sync from the full live-data refresh: Sync Board pulls shared Planner, Brand Deals, Team Access, notifications, and dismissals without rebuilding YouTube/news/comment intelligence.
 - Runs a refresh workflow through Vercel API + GitHub Actions.
@@ -40,7 +41,7 @@ Then open the local app and manually check:
 - Source buttons open in a new tab.
 - Brand modal saves.
 - Team member modal saves multiple notification channels.
-- Owner settings opens from the `CL` profile button and logout returns to the login page.
+- Owner settings opens from the CoinLyte profile logo and logout returns to the login page. Team users see a smaller account panel with logout only.
 - Brand backup downloads and import asks for confirmation before replacing records.
 - Refresh screen still renders.
 

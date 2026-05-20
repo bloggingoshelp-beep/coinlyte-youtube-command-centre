@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 const root = new URL("../", import.meta.url);
 const files = {
   html: await readFile(new URL("index.html", root), "utf8"),
+  loginPage: await readFile(new URL("login.html", root), "utf8"),
   data: await readFile(new URL("assets/data.js", root), "utf8"),
   app: await readFile(new URL("assets/app.js", root), "utf8"),
   refresh: await readFile(new URL("api/refresh.js", root), "utf8"),
@@ -38,7 +39,9 @@ const requiredText = [
   "AUTH_COOKIE_SECRET",
   "SUPABASE_SERVICE_ROLE_KEY",
   "Team login",
-  "Shared board"
+  "Shared board",
+  "User ID",
+  "coinlyte-logo.png"
 ];
 
 for (const text of requiredText) {
@@ -79,6 +82,9 @@ if (!files.staticGate.includes("parseSession") || !files.staticGate.includes("lo
 }
 if (!files.login.includes("listTeamUsers") || !files.login.includes("verifyAccessCode")) {
   throw new Error("Login endpoint must support hashed team access codes.");
+}
+if (!files.login.includes("params.get(\"userId\")") || !files.loginPage.includes("name=\"userId\"")) {
+  throw new Error("Login must require a User ID plus access code.");
 }
 if (!files.db.includes("app_state") || !files.board.includes("requireSession") || !files.board.includes("saveAppState")) {
   throw new Error("Board API must read/write shared Supabase app_state behind login.");

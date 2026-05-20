@@ -4,7 +4,7 @@ This app is ready for Vercel as a private owner dashboard. Public requests are r
 
 Required Vercel environment variables:
 
-- `OWNER_ACCESS_CODE`: the access code you type on the login screen.
+- `OWNER_ACCESS_CODE`: the owner access code. On the login screen use User ID `owner` or `kirtish` plus this code.
 - `AUTH_COOKIE_SECRET`: a long random string for signing the private session cookie.
 - `GH_PAT`: GitHub token with workflow dispatch access.
 - `GH_OWNER`: GitHub owner, for example `bloggingoshelp-beep`.
@@ -49,6 +49,7 @@ Important storage note:
 - Run `supabase/schema.sql` in the Supabase SQL editor before enabling shared mode.
 - If "Automatically expose new tables" is disabled in Supabase, keep the explicit `grant ... to service_role` lines in the schema. The app only uses the service role from Vercel API routes.
 - Planner cards, brand records, team members, notifications, and dismissed items sync through `/api/board`.
-- Team users get separate login codes through `/api/team-user`; codes are hashed before storage and cannot be viewed later.
+- Team users get separate User IDs plus login codes through `/api/team-user`; codes are hashed before storage and cannot be viewed later.
+- If a team user is paused or their board access changes, `/api/me` and `/api/board` re-check Supabase on sync/reload so the old browser session does not keep stale permissions.
 - If Supabase is not configured, the app falls back to browser local storage.
 - Before large UI changes, export the board from Content Planner or create a backup branch.

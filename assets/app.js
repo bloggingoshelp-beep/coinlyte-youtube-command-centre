@@ -771,7 +771,8 @@
     });
     $("#refresh-now")?.classList.toggle("is-hidden", !hasAppAccess("Refresh"));
     $("#sync-board")?.classList.toggle("is-hidden", !state.session);
-    $("#owner-menu").textContent = state.session?.role === "owner" ? "CL" : (state.session?.name || "T").slice(0, 2).toUpperCase();
+    $("#owner-menu")?.classList.toggle("is-team-profile", state.session?.role !== "owner");
+    $("#owner-menu")?.setAttribute("title", state.session?.role === "owner" ? "Owner settings" : "Logout");
   }
   async function bootstrapCloud() {
     await pullSharedBoard("board", { label: "Checking shared board...", success: "Shared board synced", fail: "Local board", renderAfter: true, quiet: false });
@@ -817,7 +818,12 @@
         state.session = session;
         applyAccessNavigation();
         updateNotificationBadge();
-        if (!hasAppAccess(VIEW_ACCESS[state.view])) state.view = firstAllowedView();
+        if (!hasAppAccess(VIEW_ACCESS[state.view])) {
+          state.view = firstAllowedView();
+          $all(".nav-btn").forEach((btn) => btn.classList.toggle("active", btn.dataset.view === state.view));
+          $all(".view").forEach((section) => section.classList.toggle("active", section.id === state.view));
+          $("#view-title").textContent = titleFor(state.view);
+        }
       }
       const boardRes = await fetch("/api/board", { headers: { Accept: "application/json" } });
       const board = await boardRes.json().catch(() => ({}));
@@ -3073,6 +3079,24 @@
     renderRefresh();
   }
   function openOwnerModal() {
+    if (state.session?.role !== "owner") {
+      $("#modal-root").classList.remove("is-hidden");
+      $("#modal-root").innerHTML = `
+        <div class="modal compact-account-modal" role="dialog" aria-modal="true">
+          <div class="modal-head">
+            <div><p class="eyebrow">Team · Account</p><h3>${escapeHTML(state.session?.name || "Team user")}</h3><div class="panel-sub">Signed in as ${escapeHTML(state.session?.userId || "team")}.</div></div>
+            <button class="ghost-btn" data-close type="button">Close</button>
+          </div>
+          <p class="panel-sub">Use Sync Board to pull the latest assignments, notifications, and access permissions.</p>
+          <div class="modal-actions">
+            <button class="ghost-btn" data-close type="button">Cancel</button>
+            <button class="danger-btn" data-logout type="button">Logout</button>
+          </div>
+        </div>`;
+      $all("[data-close]", $("#modal-root")).forEach((btn) => btn.addEventListener("click", closeModal));
+      $("[data-logout]", $("#modal-root"))?.addEventListener("click", logoutOwner);
+      return;
+    }
     $("#modal-root").classList.remove("is-hidden");
     $("#modal-root").innerHTML = `
       <div class="modal owner-settings-modal" role="dialog" aria-modal="true">
@@ -3141,9 +3165,10 @@
     if (authed || $("#gate").classList.contains("is-hidden")) unlock();
     $("#login-form").addEventListener("submit", (event) => {
       event.preventDefault();
+      const userId = $("#local-user-id")?.value.trim();
       const code = $("#access-code").value.trim();
-      if (!code) {
-        $("#login-error").textContent = "Enter any local passphrase to unlock this demo. Production auth should stay server-side.";
+      if (!userId || !code) {
+        $("#login-error").textContent = "Enter a user ID and access code to unlock this local preview.";
         return;
       }
       sessionStorage.setItem("cl_local_session", "1");

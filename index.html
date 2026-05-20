@@ -6,16 +6,20 @@
     <meta name="theme-color" content="#0f172a">
     <title>CoinLyte YouTube Command Centre</title>
     <link rel="preconnect" href="https://i.ytimg.com">
-    <link rel="stylesheet" href="assets/styles.css?v=20260520-1">
+    <link rel="icon" type="image/png" href="assets/brand/coinlyte-logo.png">
+    <link rel="apple-touch-icon" href="assets/brand/coinlyte-logo.png">
+    <link rel="stylesheet" href="assets/styles.css?v=20260520-2">
   </head>
   <body>
     <div id="gate" class="gate is-hidden">
       <div class="gate-panel">
-        <div class="brand-mark">CL</div>
+        <div class="brand-mark"><img src="assets/brand/coinlyte-logo.png" alt="CoinLyte"></div>
         <p class="eyebrow">CoinLyte OS</p>
         <h1>YouTube Command Centre</h1>
         <p class="gate-copy">Owner dashboard for channel analytics, content pipeline, team links, sponsorships, and refresh operations.</p>
         <form id="login-form" class="login-form">
+          <label for="local-user-id">User ID</label>
+          <input id="local-user-id" type="text" autocomplete="username" placeholder="owner or team user ID" value="owner">
           <label for="access-code">Access code</label>
           <div class="login-row">
             <input id="access-code" type="password" autocomplete="current-password" placeholder="Local preview passphrase">
@@ -29,7 +33,7 @@
     <div id="app" class="app-shell">
       <header class="app-header">
         <div class="side-brand">
-          <div class="brand-mark">CL</div>
+          <div class="brand-mark"><img src="assets/brand/coinlyte-logo.png" alt="CoinLyte"></div>
           <div>
             <strong>CoinLyte</strong>
             <span>Business Control Room</span>
