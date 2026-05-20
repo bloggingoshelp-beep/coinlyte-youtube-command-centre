@@ -4,7 +4,8 @@ This app is ready for Vercel as a private owner dashboard. Public requests are r
 
 Required Vercel environment variables:
 
-- `OWNER_ACCESS_CODE`: the owner access code. On the login screen use User ID `owner` or `kirtish` plus this code.
+- `OWNER_ACCESS_CODE`: the owner access code. On the login screen use User ID `Mrvyas`, `owner`, or `kirtish` plus this code.
+- `OWNER_USER_IDS` optional: comma-separated owner login IDs if you want to customize them, for example `Mrvyas,owner`.
 - `AUTH_COOKIE_SECRET`: a long random string for signing the private session cookie.
 - `GH_PAT`: GitHub token with workflow dispatch access.
 - `GH_OWNER`: GitHub owner, for example `bloggingoshelp-beep`.

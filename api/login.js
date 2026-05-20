@@ -1,6 +1,15 @@
 import { APP_ACCESS, MAX_SESSION_AGE, createSessionCookie, safeEqual, verifyAccessCode } from "./auth.js";
 import { isDbConfigured, listTeamUsers } from "./db.js";
 
+const DEFAULT_OWNER_USER_IDS = ["owner", "kirtish", "mrvyas"];
+
+function ownerUserIds() {
+  return String(process.env.OWNER_USER_IDS || DEFAULT_OWNER_USER_IDS.join(","))
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let body = "";
@@ -33,8 +42,8 @@ export default async function handler(req, res) {
   const code = String(params.get("code") || "");
   const userId = String(params.get("userId") || "").trim().toLowerCase();
   let session = null;
-  if ((userId === "owner" || userId === "kirtish") && safeEqual(code, expected)) {
-    session = { role: "owner", name: "Kirtish", userId: "owner", access: APP_ACCESS, iat: Date.now() };
+  if (ownerUserIds().includes(userId) && safeEqual(code, expected)) {
+    session = { role: "owner", name: "Kirtish", userId: userId || "owner", access: APP_ACCESS, iat: Date.now() };
   } else if (isDbConfigured()) {
     try {
       const users = await listTeamUsers();

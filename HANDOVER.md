@@ -22,7 +22,7 @@ CoinLyte Command Centre is not a generic dashboard. It is the control room for o
 - `assets/data.js`: seed/default data.
 - `assets/live-data.js`: generated live data.
 - `api/static.js`: private static file serving behind login.
-- `api/login.js` / `api/logout.js`: owner and team access sessions. Owner login requires User ID `owner` or `kirtish` plus the owner code.
+- `api/login.js` / `api/logout.js`: owner and team access sessions. Owner login accepts User ID `Mrvyas`, `owner`, or `kirtish` by default plus the owner code. `OWNER_USER_IDS` can override the allowed owner IDs.
 - `api/refresh.js`: starts GitHub Actions refresh.
 - `api/refresh-status.js`: checks refresh run status.
 - `api/notify.js`: optional email notification endpoint.

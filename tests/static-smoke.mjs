@@ -86,6 +86,9 @@ if (!files.login.includes("listTeamUsers") || !files.login.includes("verifyAcces
 if (!files.login.includes("params.get(\"userId\")") || !files.loginPage.includes("name=\"userId\"")) {
   throw new Error("Login must require a User ID plus access code.");
 }
+if (!files.login.includes("OWNER_USER_IDS") || !files.login.includes("mrvyas")) {
+  throw new Error("Owner login should support configurable owner User IDs including Mrvyas.");
+}
 if (!files.db.includes("app_state") || !files.board.includes("requireSession") || !files.board.includes("saveAppState")) {
   throw new Error("Board API must read/write shared Supabase app_state behind login.");
 }

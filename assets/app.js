@@ -2277,10 +2277,14 @@
         <div class="modal-actions"><button class="ghost-btn" data-close type="button">Cancel</button><button class="primary-btn" type="submit">Save User</button></div>
       </form>`;
     $all("[data-close]", $("#modal-root")).forEach((btn) => btn.addEventListener("click", closeModal));
-    $("#member-form").addEventListener("submit", (event) => {
+    $("#member-form").addEventListener("submit", async (event) => {
       event.preventDefault();
       const form = new FormData(event.currentTarget);
       const accessCode = String(form.get("accessCode") || "").trim();
+      if (!editing && !accessCode) {
+        toast("Set an access code for a new team login.");
+        return;
+      }
       const next = withId({
         id: current.id,
         name: form.get("name").trim(),
@@ -2297,7 +2301,7 @@
       if (editing) state.teamMembers = state.teamMembers.map((item) => item.id === current.id ? next : item);
       else state.teamMembers.unshift(next);
       saveTeam();
-      if (accessCode) syncTeamMemberAccess(next, accessCode);
+      await syncTeamMemberAccess(next, accessCode);
       closeModal();
       state.view === "team" ? renderTeam() : renderPlanner();
       toast(editing ? "Team access updated." : "Team user created.");
@@ -2305,7 +2309,7 @@
   }
   async function syncTeamMemberAccess(member, accessCode) {
     if (!state.cloud.ready) {
-      toast("Team code saved locally? No. Configure Supabase first, then reset this user code.");
+      toast("Team access saved locally. Configure Supabase to enable separate team login.");
       return;
     }
     try {
@@ -2315,9 +2319,14 @@
         body: JSON.stringify({ member, accessCode })
       });
       if (!res.ok) throw new Error("Team login save failed");
-      toast(`${member.name} can now log in with their own code.`);
+      const body = await res.json().catch(() => ({}));
+      if (body.member) {
+        state.teamMembers = state.teamMembers.map((item) => item.id === member.id ? normalizeTeamMembers([body.member])[0] : item);
+        saveTeam();
+      }
+      toast(accessCode ? `${member.name} can now log in with their own code.` : `${member.name} access updated in Supabase.`);
     } catch {
-      toast("Team access code was not saved. Check Supabase setup and try again.");
+      toast("Team access was not saved to Supabase. Check setup and try again.");
     }
   }
   function deleteTeamMember(id) {
