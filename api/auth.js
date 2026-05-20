@@ -1,4 +1,5 @@
 import { createHmac, pbkdf2Sync, randomBytes, timingSafeEqual } from "node:crypto";
+import { getTeamUserById, isDbConfigured } from "./db.js";
 
 export const MAX_SESSION_AGE = 60 * 60 * 24 * 7;
 export const APP_ACCESS = ["Command", "Analytics", "Channel Intelligence", "Content Planner", "Brand Deals", "Team Access", "Refresh"];
@@ -56,10 +57,28 @@ export function hasAccess(session, area) {
   return Array.isArray(session?.access) && session.access.includes(area);
 }
 
-export function requireSession(req, res) {
+export async function getCurrentSession(req) {
   const session = parseSession(req);
+  if (!session) return null;
+  if (session.role === "owner") return { ...session, access: APP_ACCESS };
+  if (!isDbConfigured() || !session.memberId) return session;
+  const member = await getTeamUserById(session.memberId);
+  if (!member || member.access_status === "Paused") return null;
+  return {
+    ...session,
+    role: member.role || "Team",
+    name: member.name || session.name,
+    userId: member.user_id || session.userId,
+    memberId: member.id,
+    access: Array.isArray(member.access) ? member.access : []
+  };
+}
+
+export async function requireSession(req, res) {
+  const session = await getCurrentSession(req);
   if (session) return session;
   res.statusCode = 401;
+  res.setHeader("Set-Cookie", "cl_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0");
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.end(JSON.stringify({ error: "Login required" }));
   return null;

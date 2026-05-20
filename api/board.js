@@ -15,7 +15,7 @@ const ACCESS_FIELDS = {
 
 function allowedFields(session) {
   if (session.role === "owner") return OWNER_FIELDS;
-  return [...new Set(APP_ACCESS.flatMap((area) => hasAccess(session, area) ? ACCESS_FIELDS[area] || [] : []))];
+  return [...new Set(["notifications", ...APP_ACCESS.flatMap((area) => hasAccess(session, area) ? ACCESS_FIELDS[area] || [] : [])])];
 }
 
 function filterBoard(data = {}, session) {
@@ -48,7 +48,7 @@ async function readJson(req) {
 }
 
 export default async function handler(req, res) {
-  const session = requireSession(req, res);
+  const session = await requireSession(req, res);
   if (!session) return;
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   if (!isDbConfigured()) {

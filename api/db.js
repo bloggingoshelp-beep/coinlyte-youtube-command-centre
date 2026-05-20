@@ -53,6 +53,12 @@ export async function listTeamUsers() {
   return supabaseFetch("team_users?select=*&order=created_at.asc");
 }
 
+export async function getTeamUserById(id) {
+  if (!id) return null;
+  const rows = await supabaseFetch(`team_users?id=eq.${encodeURIComponent(id)}&select=*&limit=1`);
+  return rows?.[0] || null;
+}
+
 export async function upsertTeamUser(user) {
   const rows = await supabaseFetch("team_users?on_conflict=id", {
     method: "POST",

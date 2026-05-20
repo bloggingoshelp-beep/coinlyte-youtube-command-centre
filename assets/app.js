@@ -447,6 +447,7 @@
   }
   function saveNotifications() {
     store.set("cl_notifications_v1", state.notifications.slice(0, 80));
+    updateNotificationBadge();
     scheduleCloudSave();
   }
   function normalizeTeamMembers(members) {
@@ -502,6 +503,7 @@
     saveNotifications();
     if (note.emailStatus) sendEmailNotification(note);
     toast(`${note.memberName}: ${message}`);
+    updateNotificationBadge();
     if (state.view === "team") renderTeam();
   }
   async function sendEmailNotification(note) {
@@ -522,6 +524,7 @@
       state.notifications = state.notifications.map((item) => item.id === note.id ? { ...item, emailStatus: "failed" } : item);
     }
     saveNotifications();
+    updateNotificationBadge();
     if (state.view === "team") renderTeam();
   }
   function ideaKey(idea) {
@@ -803,11 +806,17 @@
     try {
       if (!quiet) setSync(label);
       const sessionRes = await fetch("/api/me", { headers: { Accept: "application/json" } });
+      if (sessionRes.status === 401) {
+        sessionStorage.removeItem("cl_local_session");
+        window.location.href = "/login.html?error=1";
+        return;
+      }
       if (!sessionRes.ok) throw new Error("No server session");
       const session = await sessionRes.json();
       if (session.authenticated) {
         state.session = session;
         applyAccessNavigation();
+        updateNotificationBadge();
         if (!hasAppAccess(VIEW_ACCESS[state.view])) state.view = firstAllowedView();
       }
       const boardRes = await fetch("/api/board", { headers: { Accept: "application/json" } });
@@ -2134,6 +2143,73 @@
       </div>
     </article>`;
   }
+  function visibleNotifications() {
+    if (state.session?.role === "owner") return state.notifications;
+    const memberId = state.session?.memberId || "";
+    const name = state.session?.name || "";
+    return state.notifications.filter((note) => !note.memberId || note.memberId === memberId || note.memberName === name);
+  }
+  function updateNotificationBadge() {
+    const count = visibleNotifications().filter((note) => !note.read).length;
+    const badge = $("#notification-count");
+    const btn = $("#notification-menu");
+    if (!badge || !btn) return;
+    badge.textContent = String(count);
+    badge.classList.toggle("is-hidden", count === 0);
+    btn.classList.toggle("has-unread", count > 0);
+    btn.setAttribute("aria-label", count ? `${count} unread notifications` : "Notifications");
+  }
+  function openNotificationsModal() {
+    const notes = visibleNotifications();
+    $("#modal-root").classList.remove("is-hidden");
+    $("#modal-root").innerHTML = `
+      <div class="modal notification-modal" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <div><p class="eyebrow">Board · Notifications</p><h3>Notification Inbox</h3><div class="panel-sub">${notes.filter((note) => !note.read).length} unread · open cards, mark read, or dismiss from anywhere.</div></div>
+          <button class="ghost-btn" data-close type="button">Close</button>
+        </div>
+        <div class="notification-list">${notes.slice(0, 20).map(notificationItem).join("") || `<div class="empty">No notifications for this login yet.</div>`}</div>
+        <div class="modal-actions">
+          <button class="ghost-btn" data-mark-visible-read type="button">Mark Visible Read</button>
+          <button class="primary-btn" data-close type="button">Done</button>
+        </div>
+      </div>`;
+    const root = $("#modal-root");
+    $all("[data-close]", root).forEach((btn) => btn.addEventListener("click", closeModal));
+    $("[data-mark-visible-read]", root)?.addEventListener("click", () => {
+      const visibleIds = new Set(notes.map((note) => note.id));
+      state.notifications = state.notifications.map((note) => visibleIds.has(note.id) ? { ...note, read: true } : note);
+      saveNotifications();
+      openNotificationsModal();
+    });
+    bindNotificationActions(root, openNotificationsModal);
+  }
+  function bindNotificationActions(root = document, afterChange = () => render()) {
+    $all("[data-read-notification]", root).forEach((btn) => btn.addEventListener("click", () => {
+      state.notifications = state.notifications.map((note) => note.id === btn.dataset.readNotification ? { ...note, read: !note.read } : note);
+      saveNotifications();
+      afterChange();
+    }));
+    $all("[data-dismiss-notification]", root).forEach((btn) => btn.addEventListener("click", () => {
+      state.notifications = state.notifications.filter((note) => note.id !== btn.dataset.dismissNotification);
+      saveNotifications();
+      toast("Notification dismissed.");
+      afterChange();
+    }));
+    $all("[data-open-notification]", root).forEach((btn) => btn.addEventListener("click", () => {
+      const note = state.notifications.find((item) => item.cardId === btn.dataset.openNotification);
+      if (note) {
+        state.notifications = state.notifications.map((item) => item.id === note.id ? { ...item, read: true } : item);
+        saveNotifications();
+      }
+      closeModal();
+      setView("planner");
+      state.plannerTab = "board";
+      renderPlanner();
+      const card = state.pipeline.find((item) => item.id === btn.dataset.openNotification);
+      if (card) openCardModal(card);
+    }));
+  }
   function bindPlannerTeam() {
     $("#hub-query")?.addEventListener("input", (event) => {
       state.hubQuery = event.target.value;
@@ -2157,29 +2233,7 @@
       saveNotifications();
       renderTeam();
     });
-    $all("[data-read-notification]").forEach((btn) => btn.addEventListener("click", () => {
-      state.notifications = state.notifications.map((note) => note.id === btn.dataset.readNotification ? { ...note, read: !note.read } : note);
-      saveNotifications();
-      renderTeam();
-    }));
-    $all("[data-dismiss-notification]").forEach((btn) => btn.addEventListener("click", () => {
-      state.notifications = state.notifications.filter((note) => note.id !== btn.dataset.dismissNotification);
-      saveNotifications();
-      renderTeam();
-      toast("Notification dismissed.");
-    }));
-    $all("[data-open-notification]").forEach((btn) => btn.addEventListener("click", () => {
-      const note = state.notifications.find((item) => item.cardId === btn.dataset.openNotification);
-      if (note) {
-        note.read = true;
-        saveNotifications();
-      }
-      setView("planner");
-      state.plannerTab = "board";
-      renderPlanner();
-      const card = state.pipeline.find((item) => item.id === btn.dataset.openNotification);
-      if (card) openCardModal(card);
-    }));
+    bindNotificationActions(document, renderTeam);
   }
   function openTeamMemberModal(member) {
     const editing = Boolean(member);
@@ -3068,6 +3122,7 @@
   function render() {
     $("#side-refresh").textContent = new Date(data.refreshedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
     $("#side-refresh-mode").textContent = state.refreshJob?.status || "Latest cached build";
+    updateNotificationBadge();
     if (state.view === "overview") renderOverview();
     if (state.view === "analytics") renderAnalytics();
     if (state.view === "intelligence") renderIntelligence();
@@ -3110,6 +3165,7 @@
       setView("refresh");
       triggerRefresh();
     });
+    $("#notification-menu")?.addEventListener("click", openNotificationsModal);
     $("#owner-menu")?.addEventListener("click", openOwnerModal);
   }
   init();
