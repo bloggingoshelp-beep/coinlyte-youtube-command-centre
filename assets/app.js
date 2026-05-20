@@ -2133,7 +2133,7 @@
       <div class="card-actions"><span class="tag teal">👤 ${escapeHTML(member.role || "Team")}</span><span class="tag ${member.accessStatus === "Paused" ? "red" : "green"}">${escapeHTML(member.accessStatus || "Active")}</span><span class="tag blue">${member.notifyStages ? "🔔 Stage alerts" : "🔕 Quiet"}</span></div>
       <h4>${escapeHTML(member.name)}</h4>
       <p>${escapeHTML(member.userId || "No user ID")} · ${escapeHTML(normalizeChannels(member).join(", "))}${member.email ? ` · ${escapeHTML(member.email)}` : ""}</p>
-      <div class="access-chip-row">${(member.access || []).map((item) => `<span>${escapeHTML(item)}</span>`).join("")}</div>
+      <div class="access-chip-row">${(member.access || []).map((item) => `<span>${escapeHTML(item)}</span>`).join("")}${member.hasAccessCode ? `<span>🔑 Login ready</span>` : `<span>⚠️ Set login code</span>`}</div>
       <div class="card-actions"><button class="ghost-btn compact-btn" data-edit-member="${member.id}" type="button">Edit Access</button><button class="danger-btn compact-btn" data-delete-member="${member.id}" type="button" ${member.role === "Owner" ? "disabled" : ""}>×</button></div>
     </article>`;
   }
@@ -2298,35 +2298,40 @@
       });
       if (!next.channels.length) next.channels = ["In-app"];
       if (!next.access.length) next.access = ["Content Planner"];
+      const previousMembers = state.teamMembers;
       if (editing) state.teamMembers = state.teamMembers.map((item) => item.id === current.id ? next : item);
       else state.teamMembers.unshift(next);
       saveTeam();
-      await syncTeamMemberAccess(next, accessCode);
+      const synced = await syncTeamMemberAccess(next, accessCode);
+      if (!synced) {
+        state.teamMembers = previousMembers;
+        saveTeam();
+        renderTeam();
+        return;
+      }
       closeModal();
       state.view === "team" ? renderTeam() : renderPlanner();
       toast(editing ? "Team access updated." : "Team user created.");
     });
   }
   async function syncTeamMemberAccess(member, accessCode) {
-    if (!state.cloud.ready) {
-      toast("Team access saved locally. Configure Supabase to enable separate team login.");
-      return;
-    }
     try {
       const res = await fetch("/api/team-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ member, accessCode })
       });
-      if (!res.ok) throw new Error("Team login save failed");
       const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok) throw new Error(body.error || "Team login save failed");
       if (body.member) {
         state.teamMembers = state.teamMembers.map((item) => item.id === member.id ? normalizeTeamMembers([body.member])[0] : item);
         saveTeam();
       }
       toast(accessCode ? `${member.name} can now log in with their own code.` : `${member.name} access updated in Supabase.`);
+      return true;
     } catch {
-      toast("Team access was not saved to Supabase. Check setup and try again.");
+      toast("Team access was not saved to Supabase. Do not use this team login yet.");
+      return false;
     }
   }
   function deleteTeamMember(id) {
