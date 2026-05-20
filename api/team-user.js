@@ -1,5 +1,5 @@
 import { hashAccessCode, requireOwner } from "./auth.js";
-import { publicTeamUser, upsertTeamUser } from "./db.js";
+import { listTeamUsers, publicTeamUser, upsertTeamUser } from "./db.js";
 
 async function readJson(req) {
   return new Promise((resolve, reject) => {
@@ -19,8 +19,17 @@ async function readJson(req) {
 export default async function handler(req, res) {
   if (!requireOwner(req, res)) return;
   res.setHeader("Content-Type", "application/json; charset=utf-8");
+  if (req.method === "GET") {
+    try {
+      const members = await listTeamUsers();
+      return res.end(JSON.stringify({ ok: true, members: members.map(publicTeamUser) }));
+    } catch (error) {
+      res.statusCode = error.status || 500;
+      return res.end(JSON.stringify({ ok: false, error: error.message || "Team user check failed" }));
+    }
+  }
   if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
+    res.setHeader("Allow", "GET, POST");
     res.statusCode = 405;
     return res.end(JSON.stringify({ ok: false, error: "Method not allowed" }));
   }

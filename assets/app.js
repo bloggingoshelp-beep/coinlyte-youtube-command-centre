@@ -395,6 +395,48 @@
     if (Array.isArray(board.dismissedCommand)) state.dismissedCommand = board.dismissedCommand;
     saveLocalSnapshot();
   }
+  function mergeTeamLoginUsers(members = []) {
+    const serverMembers = normalizeTeamMembers(members);
+    const byId = new Map(serverMembers.map((member) => [member.id, member]));
+    const byUser = new Map(serverMembers.map((member) => [String(member.userId || "").toLowerCase(), member]));
+    let changed = false;
+    const seen = new Set();
+    state.teamMembers = normalizeTeamMembers(state.teamMembers).map((member) => {
+      const server = byId.get(member.id) || byUser.get(String(member.userId || "").toLowerCase());
+      if (!server) {
+        if (member.role === "Owner") return member;
+        if (member.hasAccessCode === false) return member;
+        changed = true;
+        return { ...member, hasAccessCode: false };
+      }
+      seen.add(server.id);
+      const merged = { ...member, ...server };
+      if (JSON.stringify(merged) !== JSON.stringify(member)) changed = true;
+      return merged;
+    });
+    serverMembers.forEach((member) => {
+      if (!seen.has(member.id) && member.role !== "Owner") {
+        state.teamMembers.push(member);
+        changed = true;
+      }
+    });
+    if (changed) saveLocalSnapshot();
+    return changed;
+  }
+  async function refreshTeamLoginUsers({ quiet = false } = {}) {
+    if (state.session?.role !== "owner") return false;
+    try {
+      const res = await fetch("/api/team-user", { headers: { Accept: "application/json" } });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok) throw new Error(body.error || "Team login check failed");
+      mergeTeamLoginUsers(body.members || []);
+      if (!quiet) toast("Team login status checked.");
+      return true;
+    } catch {
+      if (!quiet) toast("Could not check team login status from Supabase.");
+      return false;
+    }
+  }
   function scheduleCloudSave() {
     if (!state.cloud.ready || state.cloud.loading) return;
     state.cloud.dirty = true;
@@ -835,6 +877,9 @@
         await persistBoardNow();
       } else {
         applyBoardData(board.data || {});
+      }
+      if (state.session?.role === "owner" && ["board", "team"].includes(scope)) {
+        await refreshTeamLoginUsers({ quiet: true });
       }
       state.cloud.lastSyncedAt = new Date().toISOString();
       setSync(success);
@@ -2232,6 +2277,10 @@
   function bindTeamAccess() {
     $("[data-add-member]")?.addEventListener("click", () => openTeamMemberModal());
     $all("[data-sync-scope]").forEach((btn) => btn.addEventListener("click", () => syncSharedBoard(btn.dataset.syncScope)));
+    $("[data-check-logins]")?.addEventListener("click", async () => {
+      await refreshTeamLoginUsers();
+      renderTeam();
+    });
     $all("[data-edit-member]").forEach((btn) => btn.addEventListener("click", () => openTeamMemberModal(state.teamMembers.find((member) => member.id === btn.dataset.editMember))));
     $all("[data-delete-member]").forEach((btn) => btn.addEventListener("click", () => deleteTeamMember(btn.dataset.deleteMember)));
     $("[data-clear-notifications]")?.addEventListener("click", () => {
@@ -2283,6 +2332,10 @@
       const accessCode = String(form.get("accessCode") || "").trim();
       if (!editing && !accessCode) {
         toast("Set an access code for a new team login.");
+        return;
+      }
+      if (editing && !current.hasAccessCode && !accessCode) {
+        toast("This user is not login ready yet. Set an access code before saving.");
         return;
       }
       const next = withId({
@@ -2641,6 +2694,7 @@
           <div><h3>🔐 App Access</h3><div class="panel-sub">Create user IDs, choose allowed app areas, and set/reset login codes from the edit modal.</div></div>
           <div class="card-actions">
             <button class="ghost-btn sync-board-btn" data-sync-scope="team" type="button">Sync Team</button>
+            <button class="ghost-btn sync-board-btn" data-check-logins type="button">Check Login Users</button>
             <button class="primary-btn" data-add-member type="button">Add Team Member</button>
           </div>
         </div>

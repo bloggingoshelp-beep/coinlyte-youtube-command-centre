@@ -50,7 +50,7 @@ Important storage note:
 - Run `supabase/schema.sql` in the Supabase SQL editor before enabling shared mode.
 - If "Automatically expose new tables" is disabled in Supabase, keep the explicit `grant ... to service_role` lines in the schema. The app only uses the service role from Vercel API routes.
 - Planner cards, brand records, team members, notifications, and dismissed items sync through `/api/board`.
-- Team users get separate User IDs plus login codes through `/api/team-user`; codes are hashed before storage and cannot be viewed later.
+- Team users get separate User IDs plus login codes through `/api/team-user`; codes are hashed before storage and cannot be viewed later. Use Team Access -> Check Login Users to confirm a member shows `Login ready` before sharing their code.
 - If a team user is paused or their board access changes, `/api/me` and `/api/board` re-check Supabase on sync/reload so the old browser session does not keep stale permissions.
 - If Supabase is not configured, the app falls back to browser local storage.
 - Before large UI changes, export the board from Content Planner or create a backup branch.

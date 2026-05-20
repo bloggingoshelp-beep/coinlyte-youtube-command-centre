@@ -39,6 +39,7 @@ const requiredText = [
   "AUTH_COOKIE_SECRET",
   "SUPABASE_SERVICE_ROLE_KEY",
   "Team login",
+  "Check Login Users",
   "Shared board",
   "User ID",
   "coinlyte-logo.png"
@@ -92,8 +93,8 @@ if (!files.login.includes("OWNER_USER_IDS") || !files.login.includes("mrvyas")) 
 if (!files.db.includes("app_state") || !files.board.includes("requireSession") || !files.board.includes("saveAppState")) {
   throw new Error("Board API must read/write shared Supabase app_state behind login.");
 }
-if (!files.teamUser.includes("hashAccessCode") || !files.teamUser.includes("requireOwner")) {
-  throw new Error("Team user API must hash codes and require owner access.");
+if (!files.teamUser.includes("hashAccessCode") || !files.teamUser.includes("requireOwner") || !files.teamUser.includes("listTeamUsers")) {
+  throw new Error("Team user API must hash codes, require owner access, and list login-ready users.");
 }
 if (!files.refresh.includes("requireOwner") || !files.status.includes("requireOwner")) {
   throw new Error("Refresh API endpoints must require owner access.");

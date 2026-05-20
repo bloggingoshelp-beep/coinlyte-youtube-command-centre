@@ -72,4 +72,5 @@ The preferred style is Claude-inspired: premium cards, strong color coding, clea
 - Notification Board supports open card, mark read/unread, and dismiss.
 - Owner `CL` profile button opens owner settings and logout.
 - Team users include an access status, app-area permissions, multiple notification channels, and optional hashed login codes. Already logged-in team users are re-validated against Supabase during sync/reload, so paused users or changed access should take effect without editing code.
+- Team Access has a Check Login Users action that reads Supabase directly and shows whether each team member is truly login-ready. If a member shows Set login code, edit that user and set/reset the code before sharing it.
 - Shared board API stores planner, brand, team, notification, and dismissed-item state in Supabase when configured.
