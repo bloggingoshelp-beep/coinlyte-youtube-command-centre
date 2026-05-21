@@ -510,6 +510,9 @@
   function teamMemberName(id) {
     return state.teamMembers.find((member) => member.id === id)?.name || "";
   }
+  function teamMemberFor(id) {
+    return state.teamMembers.find((member) => member.id === id);
+  }
   function teamMemberOptions(selected = "") {
     return state.teamMembers.map((member) => `<option value="${escapeHTML(member.id)}" ${selected === member.id ? "selected" : ""}>${escapeHTML(member.name)} · ${escapeHTML(member.role || "Team")}</option>`).join("");
   }
@@ -2393,16 +2396,34 @@
     if (!member || member.role === "Owner") return;
     confirmDialog({
       title: "Remove team member?",
-      body: `This removes ${member.name} from assignment and access lists.`,
+      body: `This removes ${member.name} from assignment, board access, and the secure team login list.`,
       confirmText: "Remove",
       danger: true,
-      onConfirm: () => {
+      onConfirm: async () => {
+        const removedMembers = state.teamMembers;
+        const removedPipeline = state.pipeline;
         state.teamMembers = state.teamMembers.filter((item) => item.id !== id);
         state.pipeline = state.pipeline.map((card) => card.assignedTo === id ? { ...card, assignedTo: "" } : card);
         saveTeam();
         savePipeline();
-        state.view === "team" ? renderTeam() : renderPlanner();
-        toast("Team member removed.");
+        try {
+          const res = await fetch("/api/team-user", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id })
+          });
+          const body = await res.json().catch(() => ({}));
+          if (!res.ok || !body.ok) throw new Error(body.error || "Delete failed");
+          state.view === "team" ? renderTeam() : renderPlanner();
+          toast("Team member and login removed.");
+        } catch {
+          state.teamMembers = removedMembers;
+          state.pipeline = removedPipeline;
+          saveTeam();
+          savePipeline();
+          state.view === "team" ? renderTeam() : renderPlanner();
+          toast("Could not remove the secure team login. Member restored.");
+        }
       }
     });
   }
@@ -2433,11 +2454,13 @@
     const tone = categoryTone(card.category, card.priority);
     const emoji = categoryEmoji(card.category, card.source);
     const brief = card.researchBrief || card.editorNotes || card.notes || "";
+    const assignee = teamMemberFor(card.assignedTo);
+    const assigneeName = assignee?.name || "";
+    const assigneeClass = assignee?.accessStatus === "Paused" ? "red" : assigneeName ? "green" : "gray";
     return `<article class="list-card pipeline-card pipeline-${tone} priority-${priority}" data-card="${card.id}">
-      <div class="card-actions"><span class="tag ${priority === "urgent" ? "red" : priority === "high" ? "gold" : "blue"}">${priority === "urgent" ? "🔴" : priority === "high" ? "🟡" : "⚪"} ${escapeHTML(card.priority || "Medium")}</span><span class="tag teal">${stageEmoji(card.stage)} ${escapeHTML(stageLabel(card.stage))}</span></div>
+      <div class="card-actions"><span class="tag ${priority === "urgent" ? "red" : priority === "high" ? "gold" : "blue"}">${priority === "urgent" ? "🔴" : priority === "high" ? "🟡" : "⚪"} ${escapeHTML(card.priority || "Medium")}</span><span class="tag teal">${stageEmoji(card.stage)} ${escapeHTML(stageLabel(card.stage))}</span>${card.assignedTo ? `<span class="tag ${assigneeClass}">👤 ${escapeHTML(assigneeName || "Unknown owner")}</span>` : `<span class="tag red">👤 Unassigned</span>`}</div>
       <h4>${escapeHTML(withLeadingEmoji(card.title, emoji))}</h4>
       <div class="panel-sub">${escapeHTML(card.category)} | Target ${escapeHTML(card.target || "not set")}</div>
-      ${card.assignedTo ? `<div class="panel-sub">Assigned: ${escapeHTML(teamMemberName(card.assignedTo))}</div>` : ""}
       <div class="panel-sub">Source: ${escapeHTML(card.source || "Manual")}${card.sourceUrl ? ` · <button class="source-action-link" data-open-url="${escapeHTML(card.sourceUrl)}" onclick="window.open(this.dataset.openUrl, '_blank', 'noopener,noreferrer');return false;" type="button">open ↗</button>` : ""}</div>
       ${card.sponsor ? `<div class="card-actions"><span class="tag gold">💰 Sponsor: ${escapeHTML(card.sponsor)}</span></div>` : ""}
       ${brief ? `<p>${escapeHTML(brief).slice(0, 120)}${String(brief).length > 120 ? "..." : ""}</p>` : ""}

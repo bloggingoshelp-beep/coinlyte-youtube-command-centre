@@ -68,6 +68,14 @@ export async function upsertTeamUser(user) {
   return rows?.[0] || null;
 }
 
+export async function deleteTeamUser(id) {
+  if (!id) return null;
+  return supabaseFetch(`team_users?id=eq.${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: { Prefer: "return=minimal" }
+  });
+}
+
 export function publicTeamUser(row) {
   if (!row) return null;
   return {

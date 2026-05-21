@@ -79,6 +79,7 @@ npm test
 - Access status can be set to Active or Paused.
 - Login access code can be set/reset from the modal when Supabase is configured.
 - A team user can log in with their own code and sees only the app areas selected in Board Access.
+- Deleting a team user removes the secure Supabase login row, not only the visible team card.
 - Sync Team pulls shared users and notifications without triggering the live-data refresh workflow.
 - Notification board displays stage/assignment alerts.
 - Notification items can be opened, marked read/unread, and dismissed.

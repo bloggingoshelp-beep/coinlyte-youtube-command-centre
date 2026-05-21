@@ -942,6 +942,7 @@ th { color: var(--muted); font-size: .74rem; text-transform: uppercase; }
 .tag.gold { background: #fffaec; color: #8a610d; }
 .tag.green { background: var(--green-soft); color: #006644; }
 .tag.blue { background: var(--blue-soft); color: var(--blue); }
+.tag.gray { background: #eef2f7; color: #526070; }
 .tag.violet { background: var(--violet-soft); color: var(--violet); }
 .tag.pink { background: var(--pink-soft); color: var(--pink); }
 .tag.coral { background: var(--coral-soft); color: var(--coral); }

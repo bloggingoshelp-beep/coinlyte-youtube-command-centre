@@ -1,5 +1,5 @@
 import { hashAccessCode, requireOwner } from "./auth.js";
-import { listTeamUsers, publicTeamUser, upsertTeamUser } from "./db.js";
+import { deleteTeamUser, listTeamUsers, publicTeamUser, upsertTeamUser } from "./db.js";
 
 async function readJson(req) {
   return new Promise((resolve, reject) => {
@@ -28,8 +28,22 @@ export default async function handler(req, res) {
       return res.end(JSON.stringify({ ok: false, error: error.message || "Team user check failed" }));
     }
   }
+  if (req.method === "DELETE") {
+    try {
+      const body = await readJson(req);
+      if (!body.id) {
+        res.statusCode = 400;
+        return res.end(JSON.stringify({ ok: false, error: "Member id is required" }));
+      }
+      await deleteTeamUser(body.id);
+      return res.end(JSON.stringify({ ok: true }));
+    } catch (error) {
+      res.statusCode = error.status || 500;
+      return res.end(JSON.stringify({ ok: false, error: error.message || "Team user delete failed" }));
+    }
+  }
   if (req.method !== "POST") {
-    res.setHeader("Allow", "GET, POST");
+    res.setHeader("Allow", "GET, POST, DELETE");
     res.statusCode = 405;
     return res.end(JSON.stringify({ ok: false, error: "Method not allowed" }));
   }

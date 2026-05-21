@@ -96,6 +96,12 @@ if (!files.db.includes("app_state") || !files.board.includes("requireSession") |
 if (!files.teamUser.includes("hashAccessCode") || !files.teamUser.includes("requireOwner") || !files.teamUser.includes("listTeamUsers")) {
   throw new Error("Team user API must hash codes, require owner access, and list login-ready users.");
 }
+if (!files.teamUser.includes("DELETE") || !files.db.includes("deleteTeamUser") || !files.app.includes("Team member and login removed")) {
+  throw new Error("Team deletion must remove the secure Supabase login row.");
+}
+if (!files.app.includes("Unknown owner") || !files.app.includes("👤 Unassigned")) {
+  throw new Error("Planner cards must visibly show assigned/unassigned ownership.");
+}
 if (!files.refresh.includes("requireOwner") || !files.status.includes("requireOwner")) {
   throw new Error("Refresh API endpoints must require owner access.");
 }
