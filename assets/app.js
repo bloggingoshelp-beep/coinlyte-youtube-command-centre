@@ -56,7 +56,7 @@
   let state = {
     view: "overview",
     period: "90d",
-    plannerMode: "list",
+    plannerMode: "board",
     plannerTab: "board",
     intelligenceTab: "health",
     brandTab: "directory",

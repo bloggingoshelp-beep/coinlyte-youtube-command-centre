@@ -1,10 +1,11 @@
-import { requireOwner } from "./auth.js";
+import { requireSession } from "./auth.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
-  if (!requireOwner(req, res)) return;
+  const session = await requireSession(req, res);
+  if (!session) return;
 
   const { to, subject, message, cardTitle } = req.body || {};
   if (!to || !subject || !message) {

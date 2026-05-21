@@ -8,6 +8,7 @@ const files = {
   app: await readFile(new URL("assets/app.js", root), "utf8"),
   refresh: await readFile(new URL("api/refresh.js", root), "utf8"),
   status: await readFile(new URL("api/refresh-status.js", root), "utf8"),
+  notify: await readFile(new URL("api/notify.js", root), "utf8"),
   login: await readFile(new URL("api/login.js", root), "utf8"),
   auth: await readFile(new URL("api/auth.js", root), "utf8"),
   me: await readFile(new URL("api/me.js", root), "utf8"),
@@ -107,6 +108,12 @@ if (!files.app.includes("persistBoardNow({ force: true });")) {
 }
 if (!files.refresh.includes("requireOwner") || !files.status.includes("requireOwner")) {
   throw new Error("Refresh API endpoints must require owner access.");
+}
+if (!files.app.includes('plannerMode: "board"')) {
+  throw new Error("Content Planner must default to board mode.");
+}
+if (!files.notify.includes("requireSession") || files.notify.includes("requireOwner")) {
+  throw new Error("Email notifications must allow any logged-in app user, not owner-only.");
 }
 if (!files.refreshScript.includes("assets/live-data.js")) {
   throw new Error("Refresh script must write the live data asset.");
