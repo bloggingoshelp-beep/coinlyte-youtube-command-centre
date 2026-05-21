@@ -2,12 +2,12 @@ import { APP_ACCESS, hasAccess, requireSession } from "./auth.js";
 import { getAppState, isDbConfigured, missingDbMessage, saveAppState } from "./db.js";
 
 const KEY = "operational";
-const OWNER_FIELDS = ["pipeline", "hubLinks", "brands", "teamMembers", "notifications", "dismissedIdeas", "dismissedCommand"];
+const OWNER_FIELDS = ["pipeline", "hubLinks", "brands", "savedRadar", "teamMembers", "notifications", "dismissedIdeas", "dismissedCommand"];
 const ACCESS_FIELDS = {
   Command: ["dismissedCommand", "notifications"],
   Analytics: [],
-  "Channel Intelligence": ["pipeline", "dismissedIdeas"],
-  "Content Planner": ["pipeline", "hubLinks", "notifications", "dismissedIdeas", "dismissedCommand"],
+  "Channel Intelligence": ["pipeline", "savedRadar", "dismissedIdeas"],
+  "Content Planner": ["pipeline", "hubLinks", "savedRadar", "notifications", "dismissedIdeas", "dismissedCommand"],
   "Brand Deals": ["brands", "notifications"],
   "Team Access": ["teamMembers", "notifications"],
   Refresh: []

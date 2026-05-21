@@ -41,6 +41,8 @@ npm test
 ## Intelligence
 
 - Market Intel shows India policy, US regulation, and global market sections.
+- News Radar shows source-only cards with source, save, and dismiss actions.
+- Saved News Radar links appear under Content Planner -> Saved Radar and survive Sync Planner.
 - Competitor Intel shows competitor videos and generated CoinLyte-fit ideas.
 - Community Pulse shows comment-led video ideas before raw top comments.
 - Add-to-Planner removes the idea from the loose idea list.
@@ -58,6 +60,7 @@ npm test
 - Research brief is read-only when created from intelligence.
 - Editor reference source can be added with title and URL.
 - Source buttons open in a new tab.
+- Saved Radar source buttons open in a new tab.
 - Moving stages creates notifications for assigned team members.
 - Sync Planner pulls shared board changes without triggering the live-data refresh workflow.
 
