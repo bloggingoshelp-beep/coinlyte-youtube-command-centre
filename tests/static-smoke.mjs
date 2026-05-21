@@ -102,6 +102,9 @@ if (!files.teamUser.includes("DELETE") || !files.db.includes("deleteTeamUser") |
 if (!files.app.includes("Unknown owner") || !files.app.includes("👤 Unassigned")) {
   throw new Error("Planner cards must visibly show assigned/unassigned ownership.");
 }
+if (!files.app.includes("persistBoardNow({ force: true });")) {
+  throw new Error("Stage moves must immediately persist to the shared board.");
+}
 if (!files.refresh.includes("requireOwner") || !files.status.includes("requireOwner")) {
   throw new Error("Refresh API endpoints must require owner access.");
 }

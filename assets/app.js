@@ -2516,6 +2516,7 @@
         message: `${card.title} moved to ${stageLabel(card.stage)}.`
       });
     }
+    persistBoardNow({ force: true });
     renderPlanner();
   }
   function deleteCard(id) {
