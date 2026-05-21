@@ -18,6 +18,9 @@
     "api/team-user.js": {
       "maxDuration": 10
     },
+    "api/notify.js": {
+      "maxDuration": 10
+    },
     "api/logout.js": {
       "maxDuration": 10
     },
@@ -32,6 +35,7 @@
     { "src": "/api/me", "dest": "/api/me.js" },
     { "src": "/api/board", "dest": "/api/board.js" },
     { "src": "/api/team-user", "dest": "/api/team-user.js" },
+    { "src": "/api/notify", "dest": "/api/notify.js" },
     { "src": "/api/refresh", "dest": "/api/refresh.js" },
     { "src": "/api/refresh-status", "dest": "/api/refresh-status.js" },
     { "src": "/(.*)", "dest": "/api/static.js" }

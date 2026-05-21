@@ -18,7 +18,8 @@ const files = {
   staticGate: await readFile(new URL("api/static.js", root), "utf8"),
   workflow: await readFile(new URL(".github/workflows/refresh.yml", root), "utf8"),
   refreshScript: await readFile(new URL(".github/scripts/refresh.py", root), "utf8"),
-  liveData: await readFile(new URL("assets/live-data.js", root), "utf8")
+  liveData: await readFile(new URL("assets/live-data.js", root), "utf8"),
+  vercel: await readFile(new URL("vercel.json", root), "utf8")
 };
 
 const requiredText = [
@@ -114,6 +115,9 @@ if (!files.app.includes('plannerMode: "board"')) {
 }
 if (!files.notify.includes("requireSession") || files.notify.includes("requireOwner")) {
   throw new Error("Email notifications must allow any logged-in app user, not owner-only.");
+}
+if (!files.vercel?.includes('/api/notify')) {
+  throw new Error("Vercel must route /api/notify to the email notification function.");
 }
 if (!files.refreshScript.includes("assets/live-data.js")) {
   throw new Error("Refresh script must write the live data asset.");
