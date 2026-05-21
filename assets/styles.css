@@ -577,6 +577,11 @@ a { color: inherit; }
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
+.saved-radar-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
 .news-radar-card {
   position: relative;
   padding: 16px;
@@ -637,6 +642,15 @@ a { color: inherit; }
   font-weight: 700;
   font-size: .9rem;
   line-height: 1.4;
+}
+.saved-radar-panel .panel-head {
+  align-items: flex-start;
+}
+.saved-radar-card {
+  min-height: 100%;
+}
+.saved-radar-card .market-card-actions {
+  margin-top: auto;
 }
 .upload-reach-grid div {
   padding: 10px;
@@ -2093,6 +2107,7 @@ th { color: var(--muted); font-size: .74rem; text-transform: uppercase; }
   .upload-spotlight, .upload-spotlight.wide { grid-template-columns: 1fr; }
   .upload-spotlight img { height: auto; min-height: 0; aspect-ratio: 16 / 9; }
   .news-radar-grid { grid-template-columns: 1fr; }
+  .saved-radar-grid { grid-template-columns: 1fr; }
   .sprint-week { grid-template-columns: 1fr; }
   .form-grid, .checks, .heat-grid { grid-template-columns: 1fr; }
   .reference-row { grid-template-columns: 1fr; }

@@ -39,6 +39,7 @@ CoinLyte Command Centre is not a generic dashboard. It is the control room for o
 - Notifications stored in `cl_notifications_v1`.
 - Dismissed ideas stored in `cl_dismissed_ideas_v1`.
 - Dismissed Command dashboard cards stored in `cl_dismissed_command_v1`.
+- Saved source-only radar links stored in `cl_saved_radar_v1`.
 - Source links and research briefs when adding ideas to Planner.
 - News Radar must remain source-only: open/dismiss news links, but do not create planner/video ideas there.
 - Owner login/access code must stay server-side in Vercel `OWNER_ACCESS_CODE`; do not hardcode it in frontend files.
@@ -77,4 +78,5 @@ The preferred style is Claude-inspired: premium cards, strong color coding, clea
 - Removing a team member now also deletes the secure Supabase login row, so deleted users cannot keep logging in with an old code.
 - Shared board API stores planner, brand, team, notification, and dismissed-item state in Supabase when configured.
 - Channel Intelligence includes a News Radar tab for the top source links from refreshed market intel. It is meant for live/weekly scanning, audience sharing, and team research handoff.
+- Content Planner includes a Saved Radar subtab. News Radar links can be saved there without creating planner/video ideas, so useful source links survive future refreshes.
 - Command Centre latest upload thumbnails are constrained to a 16:9 frame so reach context cards stay aligned.

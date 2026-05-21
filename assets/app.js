@@ -69,6 +69,7 @@
     pipeline: normalizePipeline(store.get("cl_pipeline_v4", data.defaultPipeline)),
     hubLinks: store.get("cl_hub_links_v3", data.defaultHubLinks).map(withId),
     brands: store.get("cl_brands_v3", data.defaultBrands).map(withId),
+    savedRadar: normalizeSavedRadar(store.get("cl_saved_radar_v1", [])),
     dismissedIdeas: store.get("cl_dismissed_ideas_v1", []),
     dismissedCommand: store.get("cl_dismissed_command_v1", []),
     teamMembers: normalizeTeamMembers(store.get("cl_team_members_v1", DEFAULT_TEAM)),
@@ -362,6 +363,29 @@
       return withId({ ...card, stage: card.stage || "ideas", checks, researchBrief, editorNotes, sourceLinks: mergedLinks });
     });
   }
+  function radarKey(item = {}) {
+    return String(item.sourceUrl || item.url || item.title || "").trim().toLowerCase();
+  }
+  function normalizeSavedRadar(items) {
+    const seen = new Set();
+    return (items || []).map((item) => withId({
+      title: item.title || "Saved news source",
+      bucket: item.bucket || item.source || "News Radar",
+      category: item.category || "Market",
+      sourceUrl: item.sourceUrl || item.url || "",
+      age: item.age || "",
+      angle: item.angle || item.reason || "",
+      liveUse: item.liveUse || "",
+      score: Number(item.score || 0),
+      tone: item.tone || "blue",
+      savedAt: item.savedAt || new Date().toISOString()
+    })).filter((item) => {
+      const key = radarKey(item);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
   function cleanTeamMembers(members = state.teamMembers) {
     return normalizeTeamMembers(members).map(({ accessCode, ...member }) => member);
   }
@@ -370,6 +394,7 @@
       pipeline: state.pipeline,
       hubLinks: state.hubLinks,
       brands: state.brands,
+      savedRadar: state.savedRadar,
       teamMembers: cleanTeamMembers(),
       notifications: state.notifications.slice(0, 80),
       dismissedIdeas: state.dismissedIdeas,
@@ -380,6 +405,7 @@
     store.set("cl_pipeline_v4", state.pipeline);
     store.set("cl_hub_links_v3", state.hubLinks);
     store.set("cl_brands_v3", state.brands);
+    store.set("cl_saved_radar_v1", state.savedRadar);
     store.set("cl_dismissed_ideas_v1", state.dismissedIdeas);
     store.set("cl_dismissed_command_v1", state.dismissedCommand);
     store.set("cl_team_members_v1", cleanTeamMembers());
@@ -389,6 +415,7 @@
     if (Array.isArray(board.pipeline)) state.pipeline = normalizePipeline(board.pipeline);
     if (Array.isArray(board.hubLinks)) state.hubLinks = board.hubLinks.map(withId);
     if (Array.isArray(board.brands)) state.brands = board.brands.map(withId);
+    if (Array.isArray(board.savedRadar)) state.savedRadar = normalizeSavedRadar(board.savedRadar);
     if (Array.isArray(board.teamMembers)) state.teamMembers = cleanTeamMembers(board.teamMembers);
     if (Array.isArray(board.notifications)) state.notifications = board.notifications.slice(0, 80);
     if (Array.isArray(board.dismissedIdeas)) state.dismissedIdeas = board.dismissedIdeas;
@@ -472,6 +499,10 @@
   }
   function saveBrands() {
     store.set("cl_brands_v3", state.brands);
+    scheduleCloudSave();
+  }
+  function saveSavedRadar() {
+    store.set("cl_saved_radar_v1", state.savedRadar);
     scheduleCloudSave();
   }
   function saveDismissedIdeas() {
@@ -774,7 +805,7 @@
     render();
   }
   function animateAction(btn, kind, run) {
-    const card = btn.closest(".idea-card, .market-signal-card, .competitor-row, .comment-item");
+    const card = btn.closest(".idea-card, .market-signal-card, .news-radar-card, .saved-radar-card, .competitor-row, .comment-item");
     btn.classList.add(kind === "dismiss" ? "action-dismissing" : "action-adding");
     card?.classList.add(kind === "dismiss" ? "card-dismissing" : "card-adding");
     setTimeout(run, kind === "dismiss" ? 180 : 240);
@@ -1502,6 +1533,7 @@
       : signal.key === "regulation"
         ? "Use this as proof while explaining how US crypto rules can affect Indian exchange access and token risk."
         : "Use this as macro context for weekly market direction, portfolio risk, and simple Hindi explainers.";
+    const saved = state.savedRadar.some((item) => radarKey(item) === radarKey({ title, sourceUrl: idea.sourceUrl }));
     return `<article class="news-radar-card tone-${signal.tone}">
       <div class="news-radar-top">
         <span class="news-radar-rank">#${rank + 1}</span>
@@ -1513,9 +1545,46 @@
       <div class="live-use-box">🎙️ ${escapeHTML(liveUse)}</div>
       <div class="market-card-actions">
         ${idea.sourceUrl ? `<a class="mini-link" href="${escapeHTML(idea.sourceUrl)}" target="_blank" rel="noreferrer">📰 Open Source ↗</a>` : `<span class="mini-link muted-link">📰 Source pending</span>`}
+        <button class="primary-btn compact-btn" data-save-radar="${index}" type="button" ${saved ? "disabled" : ""}>${saved ? "Saved" : "Save Radar"}</button>
         <button class="ghost-btn compact-btn dismiss-btn" data-dismiss-market="${index}" type="button">Dismiss</button>
       </div>
     </article>`;
+  }
+  function savedRadarFromSignal(signal, score = 0) {
+    const idea = signal.idea;
+    const sourceType = signal.key === "india" ? "India Policy" : signal.key === "regulation" ? "US Regulation" : "Global Macro";
+    const liveUse = signal.key === "india"
+      ? "Use this when explaining tax, exchange safety, RBI risk, or rupee impact for Indian viewers."
+      : signal.key === "regulation"
+        ? "Use this as proof while explaining how US crypto rules can affect Indian exchange access and token risk."
+        : "Use this as macro context for weekly market direction, portfolio risk, and simple Hindi explainers.";
+    return withId({
+      title: signal.item?.title || idea.title,
+      bucket: sourceType,
+      category: idea.category || sourceType,
+      sourceUrl: idea.sourceUrl || "",
+      age: signal.age || "",
+      angle: newsAngle(signal.item, signal.bucket),
+      liveUse,
+      score,
+      tone: signal.tone || "blue",
+      savedAt: new Date().toISOString()
+    });
+  }
+  function saveRadarSignal(signal, score = 0) {
+    const item = savedRadarFromSignal(signal, score);
+    if (state.savedRadar.some((saved) => radarKey(saved) === radarKey(item))) {
+      toast("That news source is already saved.");
+      return;
+    }
+    state.savedRadar.unshift(item);
+    state.savedRadar = normalizeSavedRadar(state.savedRadar).slice(0, 60);
+    saveSavedRadar();
+    toast("Saved to Planner News Radar.", { label: "Open Saved Radar", run: () => {
+      state.plannerTab = "radar";
+      setView("planner");
+    } });
+    render();
   }
   function intelligenceCompetitorContent() {
     const tones = ["red", "teal", "violet"];
@@ -1642,6 +1711,11 @@
     $all("[data-add-market]").forEach((btn) => btn.addEventListener("click", () => {
       const signal = signals[Number(btn.dataset.addMarket)];
       if (signal) animateAction(btn, "add", () => addIdeaToPipeline(signal.idea));
+    }));
+    const radar = newsRadarSignals();
+    $all("[data-save-radar]").forEach((btn) => btn.addEventListener("click", () => {
+      const radarItem = radar.find((item) => item.index === Number(btn.dataset.saveRadar));
+      if (radarItem) animateAction(btn, "add", () => saveRadarSignal(radarItem.signal, radarItem.score));
     }));
     $all("[data-dismiss-market]").forEach((btn) => btn.addEventListener("click", () => {
       const signal = signals[Number(btn.dataset.dismissMarket)];
@@ -2039,6 +2113,7 @@
         <p>Pipeline board, real upload calendar, team links, research notes, and source-backed cards in one planning app.</p>
         <div class="hero-chips">
           <span class="hchip purple">${state.pipeline.length} in pipeline</span>
+          <span class="hchip blue">${state.savedRadar.length} saved radar</span>
           <span class="hchip teal">${inProgressCount()} in progress</span>
           <span class="hchip gold">${state.pipeline.filter((c) => c.stage === "scheduled").length} scheduled</span>
         </div>
@@ -2046,14 +2121,15 @@
       <div class="intel-strip planner-tabs">
         ${plannerTabs().map(([key, label]) => `<button class="${state.plannerTab === key ? "active" : ""}" data-planner-tab="${key}" type="button">${label}</button>`).join("")}
       </div>
-      ${state.plannerTab === "calendar" ? plannerCalendarContent() : state.plannerTab === "team" ? plannerTeamContent() : plannerBoardContent(cards)}`;
+      ${state.plannerTab === "calendar" ? plannerCalendarContent() : state.plannerTab === "team" ? plannerTeamContent() : state.plannerTab === "radar" ? plannerRadarContent() : plannerBoardContent(cards)}`;
     bindPlannerTabs();
     if (state.plannerTab === "calendar") bindCalendarButtons();
     if (state.plannerTab === "team") bindPlannerTeam();
+    if (state.plannerTab === "radar") bindPlannerRadar();
     if (state.plannerTab === "board") bindPlannerBoardControls();
   }
   function plannerTabs() {
-    return [["board", "Planner Board"], ["calendar", "Calendar"], ["team", "Team Hub"]];
+    return [["board", "Planner Board"], ["radar", "Saved Radar"], ["calendar", "Calendar"], ["team", "Team Hub"]];
   }
   function bindPlannerTabs() {
     $all("[data-planner-tab]").forEach((btn) => btn.addEventListener("click", () => {
@@ -2117,6 +2193,7 @@
       pipeline: state.pipeline,
       brands: state.brands,
       hubLinks: state.hubLinks,
+      savedRadar: state.savedRadar,
       teamMembers: state.teamMembers,
       notifications: state.notifications,
       dismissedIdeas: state.dismissedIdeas,
@@ -2149,6 +2226,7 @@
             state.pipeline = normalizePipeline(payload.pipeline);
             state.brands = Array.isArray(payload.brands) ? payload.brands.map(withId) : state.brands;
             state.hubLinks = Array.isArray(payload.hubLinks) ? payload.hubLinks.map(withId) : state.hubLinks;
+            state.savedRadar = Array.isArray(payload.savedRadar) ? normalizeSavedRadar(payload.savedRadar) : state.savedRadar;
             state.teamMembers = Array.isArray(payload.teamMembers) ? normalizeTeamMembers(payload.teamMembers) : state.teamMembers;
             state.notifications = Array.isArray(payload.notifications) ? payload.notifications : state.notifications;
             state.dismissedIdeas = Array.isArray(payload.dismissedIdeas) ? payload.dismissedIdeas : state.dismissedIdeas;
@@ -2156,6 +2234,7 @@
             savePipeline();
             saveBrands();
             saveHub();
+            saveSavedRadar();
             saveTeam();
             saveNotifications();
             saveDismissedIdeas();
@@ -2171,6 +2250,80 @@
       }
     };
     reader.readAsText(file);
+  }
+  function plannerRadarContent() {
+    const items = normalizeSavedRadar(state.savedRadar);
+    return `<section class="panel saved-radar-panel">
+      <div class="panel-head">
+        <div>
+          <h3>Saved News Radar</h3>
+          <div class="panel-sub">News links you want to keep even after the next live refresh changes the radar feed.</div>
+        </div>
+        <div class="card-actions">
+          <button class="ghost-btn sync-board-btn" data-sync-scope="planner" type="button">Sync Planner</button>
+          <button class="ghost-btn" data-open-intel-radar type="button">Open Live Radar</button>
+          ${items.length ? `<button class="danger-btn" data-clear-saved-radar type="button">Clear Saved</button>` : ""}
+        </div>
+      </div>
+      <div class="news-radar-summary">
+        <span>Saved ${items.length}</span>
+        <span>India Policy ${items.filter((item) => item.bucket === "India Policy").length}</span>
+        <span>US Regulation ${items.filter((item) => item.bucket === "US Regulation").length}</span>
+        <span>Global Macro ${items.filter((item) => item.bucket === "Global Macro").length}</span>
+      </div>
+      <div class="saved-radar-grid">
+        ${items.map(savedRadarCard).join("") || `<div class="empty">No saved news yet. Go to Channel Intelligence → News Radar and click Save Radar on links worth keeping.</div>`}
+      </div>
+    </section>`;
+  }
+  function savedRadarCard(item) {
+    const savedDate = item.savedAt ? new Date(item.savedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "";
+    return `<article class="saved-radar-card news-radar-card tone-${escapeHTML(item.tone || "blue")}">
+      <div class="news-radar-top">
+        <span class="news-radar-rank">🗞️</span>
+        <span class="source-age high">${escapeHTML(item.age || "saved")}</span>
+      </div>
+      <div class="market-kicker">${escapeHTML(item.bucket || "News Radar")} · saved ${escapeHTML(savedDate || "recently")}</div>
+      <h4>${escapeHTML(item.title)}</h4>
+      ${item.angle ? `<p>${escapeHTML(item.angle)}</p>` : ""}
+      ${item.liveUse ? `<div class="live-use-box">🎙️ ${escapeHTML(item.liveUse)}</div>` : ""}
+      <div class="market-card-actions">
+        ${item.sourceUrl ? `<a class="mini-link" href="${escapeHTML(item.sourceUrl)}" target="_blank" rel="noreferrer">📰 Open Source ↗</a>` : `<span class="mini-link muted-link">📰 Source pending</span>`}
+        <button class="ghost-btn compact-btn dismiss-btn" data-remove-saved-radar="${item.id}" type="button">Remove</button>
+      </div>
+    </article>`;
+  }
+  function bindPlannerRadar() {
+    $("[data-sync-scope]")?.addEventListener("click", (event) => syncSharedBoard(event.currentTarget.dataset.syncScope));
+    $("[data-open-intel-radar]")?.addEventListener("click", () => {
+      state.intelligenceTab = "news";
+      setView("intelligence");
+    });
+    $("[data-clear-saved-radar]")?.addEventListener("click", () => {
+      confirmDialog({
+        title: "Clear saved radar?",
+        body: "This removes all saved news links from the planner radar tab.",
+        confirmText: "Clear",
+        danger: true,
+        onConfirm: () => {
+          const previous = state.savedRadar;
+          state.savedRadar = [];
+          saveSavedRadar();
+          renderPlanner();
+          toast("Saved radar cleared.", { label: "Undo", run: () => { state.savedRadar = previous; saveSavedRadar(); renderPlanner(); } });
+        }
+      });
+    });
+    $all("[data-remove-saved-radar]").forEach((btn) => btn.addEventListener("click", () => {
+      const item = state.savedRadar.find((saved) => saved.id === btn.dataset.removeSavedRadar);
+      if (!item) return;
+      animateAction(btn, "dismiss", () => {
+        state.savedRadar = state.savedRadar.filter((saved) => saved.id !== item.id);
+        saveSavedRadar();
+        renderPlanner();
+        toast("Saved radar removed.", { label: "Undo", run: () => { state.savedRadar.unshift(item); saveSavedRadar(); renderPlanner(); } });
+      });
+    }));
   }
   function plannerCalendarContent() {
     const monthDate = new Date(2026, 4, 1);
