@@ -1344,6 +1344,7 @@
     return [
       ["health", "Channel Health"],
       ["market", "Market Intel"],
+      ["news", "News Radar"],
       ["competitors", "Competitor Intel"],
       ["community", "Community Pulse"],
       ["ideas", "Video Ideas"],
@@ -1352,6 +1353,7 @@
   }
   function intelligenceContent(an) {
     if (state.intelligenceTab === "market") return intelligenceMarketContent();
+    if (state.intelligenceTab === "news") return intelligenceNewsRadarContent();
     if (state.intelligenceTab === "competitors") return intelligenceCompetitorContent();
     if (state.intelligenceTab === "community") return intelligenceCommunityContent();
     if (state.intelligenceTab === "ideas") return intelligenceIdeasContent();
@@ -1432,6 +1434,88 @@
         ${laneSignals.map(({ signal, index }) => marketSignalCard(signal, index)).join("") || `<div class="empty">No ${escapeHTML(title)} signals in this refresh.</div>`}
       </div>
     </div>`;
+  }
+  function newsRadarSignals() {
+    const hotWords = [
+      "rbi", "tax", "exchange", "india", "rupee", "inr", "stablecoin", "usdt", "tether",
+      "bitcoin", "ethereum", "xrp", "sec", "cftc", "clarity", "genius", "senate",
+      "fed", "rate", "liquidity", "blackrock", "etf", "tokenization", "rwa", "scam", "hack"
+    ];
+    const seen = new Set();
+    return marketSignals().map((signal, index) => {
+      const title = String(signal.item?.title || signal.idea?.title || "");
+      const lower = title.toLowerCase();
+      const age = String(signal.age || "");
+      let score = signal.key === "india" ? 38 : signal.key === "regulation" ? 30 : 22;
+      if (/today/i.test(age)) score += 24;
+      else if (/1d|1 day/i.test(age)) score += 18;
+      else if (/[23]d|[23] day/i.test(age)) score += 10;
+      hotWords.forEach((word) => { if (lower.includes(word)) score += 4; });
+      if (/india|rbi|rupee|inr|tax|exchange/.test(lower)) score += 10;
+      return { signal, index, score };
+    }).filter(({ signal }) => {
+      const key = String(signal.item?.title || signal.idea?.title || "").toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).sort((a, b) => b.score - a.score).slice(0, 10);
+  }
+  function intelligenceNewsRadarContent() {
+    const radar = newsRadarSignals();
+    const counts = radar.reduce((acc, item) => {
+      acc[item.signal.key] = (acc[item.signal.key] || 0) + 1;
+      return acc;
+    }, {});
+    return `<section class="panel news-radar-panel">
+      <div class="panel-head">
+        <div>
+          <h3>🛰️ News Radar — Top Sources To Scan</h3>
+          <div class="panel-sub">No video ideas here. This is your source board for live streams, weekly audience shares, and quick team review.</div>
+        </div>
+        <span class="tag green">Top ${radar.length}</span>
+      </div>
+      <div class="news-radar-summary">
+        <span>🇮🇳 India Policy ${counts.india || 0}</span>
+        <span>🧾 US Regulation ${counts.regulation || 0}</span>
+        <span>📈 Global Market ${counts.market || 0}</span>
+      </div>
+      <div class="news-radar-grid">
+        ${radar.map((item, rank) => newsRadarCard(item, rank)).join("") || `<div class="empty">No fresh radar sources in this refresh. Run Refresh Live Data to fetch news.</div>`}
+      </div>
+    </section>
+    <section class="panel reading-guide">
+      <div class="panel-head"><div><h3>How To Use News Radar</h3><div class="panel-sub">Treat this like a source-ready control room, not a planner queue.</div></div></div>
+      <div class="rule-stack">
+        ${intelligenceRule("teal", "Open Source", "Use the source link during live recording or send it to the team for audience posts.")}
+        ${intelligenceRule("gold", "Dismiss Noise", "Dismiss stories that are not useful for Indian viewers or are already covered.")}
+        ${intelligenceRule("violet", "Weekly Scan", "Pick the strongest 3-5 links for a weekly crypto market update.")}
+      </div>
+    </section>`;
+  }
+  function newsRadarCard(item, rank) {
+    const { signal, index, score } = item;
+    const idea = signal.idea;
+    const title = signal.item?.title || idea.title;
+    const sourceType = signal.key === "india" ? "India Policy" : signal.key === "regulation" ? "US Regulation" : "Global Macro";
+    const liveUse = signal.key === "india"
+      ? "Use this when explaining tax, exchange safety, RBI risk, or rupee impact for Indian viewers."
+      : signal.key === "regulation"
+        ? "Use this as proof while explaining how US crypto rules can affect Indian exchange access and token risk."
+        : "Use this as macro context for weekly market direction, portfolio risk, and simple Hindi explainers.";
+    return `<article class="news-radar-card tone-${signal.tone}">
+      <div class="news-radar-top">
+        <span class="news-radar-rank">#${rank + 1}</span>
+        <span class="source-age ${normalizePriority(idea.urgency)}">${escapeHTML(signal.age)}</span>
+      </div>
+      <div class="market-kicker">${escapeHTML(signal.emoji)} ${escapeHTML(sourceType)} · Radar score ${score}</div>
+      <h4>${escapeHTML(title)}</h4>
+      <p>${escapeHTML(newsAngle(signal.item, signal.bucket))}</p>
+      <div class="live-use-box">🎙️ ${escapeHTML(liveUse)}</div>
+      <div class="market-card-actions">
+        ${idea.sourceUrl ? `<a class="mini-link" href="${escapeHTML(idea.sourceUrl)}" target="_blank" rel="noreferrer">📰 Open Source ↗</a>` : `<span class="mini-link muted-link">📰 Source pending</span>`}
+        <button class="ghost-btn compact-btn dismiss-btn" data-dismiss-market="${index}" type="button">Dismiss</button>
+      </div>
+    </article>`;
   }
   function intelligenceCompetitorContent() {
     const tones = ["red", "teal", "violet"];
