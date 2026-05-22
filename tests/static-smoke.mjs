@@ -119,6 +119,9 @@ if (!files.notify.includes("requireSession") || files.notify.includes("requireOw
 if (!files.vercel?.includes('/api/notify')) {
   throw new Error("Vercel must route /api/notify to the email notification function.");
 }
+if (!files.vercel?.includes("qa-reports/**")) {
+  throw new Error("Vercel static function must bundle QA report files.");
+}
 if (!files.refreshScript.includes("assets/live-data.js")) {
   throw new Error("Refresh script must write the live data asset.");
 }
