@@ -116,6 +116,10 @@ Current stages:
 
 Note: The app intentionally uses `Research`, not `Scripting`, because Kirtish does not write full scripts.
 
+Planner cards use a target deadline field, not only a date. The modal stores this as a browser `datetime-local` value such as `2026-05-22T18:30`, and cards/calendar/command status parse it through `parseTargetDate`. Keep this as date plus time so editors know the same-day handoff deadline, not only the upload day.
+
+Editor reference sources are separate from the locked research brief. When a user adds a title and URL and clicks `Save`, the row converts into a locked source chip with a `Source` link and only an `Edit` option. The full card save persists those sources into `sourceLinks`.
+
 ### Saved Radar
 
 Saved Radar stores source-only news links that should survive the next refresh. It is fed from Channel Intelligence -> News Radar.
@@ -421,14 +425,16 @@ In-app notifications are stored in operational board state and visible through t
 
 Created when:
 
-- A planner card assigned to a team member changes stage.
-- Assignment/stage logic in `assets/app.js` calls notification helpers.
+- A planner card is assigned to a team member. That assignment notification is scoped to that member, so the owner does not get extra noise for work they just assigned.
+- A team member moves a planner card to a new stage. That progress notification is scoped to the owner, so Kirtish sees real status movement without seeing every assignment alert.
+- Assignment/stage logic in `assets/app.js` calls notification helpers and sets an `audience` field of `member` or `owner`.
 
 Users can:
 
 - Open card.
 - Mark read/unread.
 - Dismiss.
+- Dismiss all visible notifications in one action. This only dismisses notifications visible to the current login, not hidden notifications for another user.
 
 ### Email Notifications
 
@@ -437,10 +443,15 @@ Email notification flow:
 1. Planner card is assigned to a member.
 2. Member has Email channel selected.
 3. Member has an email address.
-4. Member has stage notifications enabled.
-5. Card changes stage.
-6. Frontend calls `/api/notify`.
-7. Vercel sends email through Resend.
+4. Frontend creates a member-scoped notification and calls `/api/notify`.
+5. Vercel sends email through Resend.
+
+Owner progress notification flow:
+
+1. A team member opens their allowed board and moves an assigned card to another stage.
+2. The member's `Send owner progress alerts` preference is enabled.
+3. Frontend creates an owner-scoped progress notification.
+4. The notification appears for the owner near the profile icon and in Team Access if the owner can access that tab.
 
 Email is optional. If `RESEND_API_KEY` is missing, the API returns `not_configured` and in-app notification still works.
 
@@ -451,7 +462,7 @@ Troubleshooting email:
 - Confirm the team member has Email checked.
 - Confirm the team member has an email address.
 - Confirm the card is assigned to that member.
-- Confirm the card actually changed stage after assignment.
+- Confirm the card assignment was saved after selecting the member. Stage-move emails are intentionally not sent to the assigned member when the owner moves the card, to avoid unnecessary notifications.
 - Check Vercel Function logs for `/api/notify`.
 - Check Resend logs.
 

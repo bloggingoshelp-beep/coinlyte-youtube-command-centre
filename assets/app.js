@@ -550,6 +550,11 @@
   function teamMemberFor(id) {
     return state.teamMembers.find((member) => member.id === id);
   }
+  function currentSessionMember() {
+    const memberId = state.session?.memberId || "";
+    const userId = state.session?.userId || "";
+    return state.teamMembers.find((member) => member.id === memberId || member.userId === userId) || null;
+  }
   function teamMemberOptions(selected = "") {
     return state.teamMembers.map((member) => `<option value="${escapeHTML(member.id)}" ${selected === member.id ? "selected" : ""}>${escapeHTML(member.name)} · ${escapeHTML(member.role || "Team")}</option>`).join("");
   }
@@ -562,12 +567,15 @@
       Telegram: "✈️"
     }[channel] || "🔔";
   }
-  function createNotification({ card, type, message, memberId }) {
-    const assigneeId = memberId || card?.assignedTo || "";
-    const assignee = state.teamMembers.find((member) => member.id === assigneeId);
-    if (assignee?.accessStatus === "Paused") return;
-    const channels = normalizeChannels(assignee || {});
+  function createNotification({ card, type, message, memberId, audience }) {
+    const resolvedAudience = audience || (memberId === "owner-kirtish" || type === "owner" ? "owner" : "member");
+    const ownerMember = state.teamMembers.find((member) => (member.role || "").toLowerCase() === "owner") || state.teamMembers.find((member) => member.id === "owner-kirtish");
+    const assigneeId = resolvedAudience === "owner" ? (memberId || ownerMember?.id || "owner-kirtish") : (memberId || card?.assignedTo || "");
+    const assignee = state.teamMembers.find((member) => member.id === assigneeId) || (resolvedAudience === "owner" ? ownerMember : null);
+    if (resolvedAudience === "member" && assignee?.accessStatus === "Paused") return;
+    const channels = resolvedAudience === "owner" ? normalizeChannels(assignee || ownerMember || {}) : normalizeChannels(assignee || {});
     const note = withId({
+      audience: resolvedAudience,
       type,
       cardId: card?.id || "",
       title: card?.title || "Planner update",
@@ -584,7 +592,7 @@
     state.notifications = state.notifications.slice(0, 80);
     saveNotifications();
     if (note.emailStatus) sendEmailNotification(note);
-    toast(`${note.memberName}: ${message}`);
+    if (notificationVisibleForSession(note)) toast(`${note.memberName}: ${message}`);
     updateNotificationBadge();
     if (state.view === "team") renderTeam();
   }
@@ -1166,7 +1174,7 @@
     bindCommandControls();
   }
   function commandDecisionLine(card, idea) {
-    if (!card) return idea?.reason || "Start by adding one strong idea into the planner, then assign an owner and target date.";
+    if (!card) return idea?.reason || "Start by adding one strong idea into the planner, then assign an owner and target deadline.";
     const stage = stageLabel(card.stage).toLowerCase();
     const owner = card.assignedTo ? teamMemberName(card.assignedTo) : "no owner yet";
     return `${stage} card with ${owner}. Next: ${nextStageNudge(card).toLowerCase()}`;
@@ -1224,10 +1232,12 @@
     if (!card) return { label: "No target", tone: "gold" };
     const date = parseTargetDate(card.target);
     if (!date) return { label: "No target", tone: "gold" };
+    const now = new Date();
+    if (date < now && card.stage !== "published") return { label: "Overdue", tone: "red" };
     const base = commandToday();
     const diff = Math.round((startOfDay(date) - base) / 86400000);
     if (diff < 0) return { label: `${Math.abs(diff)}d overdue`, tone: "red" };
-    if (diff === 0) return { label: "Today", tone: "red" };
+    if (diff === 0) return { label: `Today ${formatDeadlineTime(date)}`, tone: "red" };
     if (diff === 1) return { label: "Tomorrow", tone: "gold" };
     return { label: `${diff}d left`, tone: diff <= 3 ? "gold" : "green" };
   }
@@ -1240,7 +1250,7 @@
   }
   function isOverdue(card) {
     const date = parseTargetDate(card.target);
-    return date && startOfDay(date) < commandToday() && card.stage !== "published";
+    return date && date < new Date() && card.stage !== "published";
   }
   function priorityTone(priority = "") {
     const text = String(priority).toLowerCase();
@@ -1251,7 +1261,7 @@
   }
   function nextStageNudge(card) {
     return {
-      ideas: "attach source, owner, and target date",
+      ideas: "attach source, owner, and target deadline",
       research: "lock research brief and move to recording",
       recording: "record or add editor reference sources",
       editing: "final edit, thumbnail, and scheduled upload check",
@@ -2126,6 +2136,7 @@
       card: newCard,
       type: "new-card",
       memberId: "owner-kirtish",
+      audience: "owner",
       message: `${newCard.title} was added to planner from ${newCard.source || "Intelligence"}.`
     });
     render();
@@ -2361,11 +2372,11 @@
     const active = state.pipeline.filter((card) => card.stage !== "published");
     const scheduled = active.filter((card) => parseTargetDate(card.target));
     return `<div class="panel">
-      <div class="panel-head"><div><h3>Actual Upload Calendar</h3><div class="panel-sub">Planner cards appear on their target date. Edit a card to change where it lands.</div></div><button class="primary-btn" data-new-card type="button">Add Video</button></div>
+      <div class="panel-head"><div><h3>Actual Upload Calendar</h3><div class="panel-sub">Planner cards appear on their target deadline date. Edit a card to change where it lands.</div></div><button class="primary-btn" data-new-card type="button">Add Video</button></div>
       <div class="grid cols-4">
         ${metric("Best Window", data.bestHours.rows[0]?.time || "09:30 IST", data.bestHours.source)}
         ${metric("This Week", active.length, "Unpublished planner cards")}
-        ${metric("Scheduled", scheduled.length, "Cards with target dates")}
+        ${metric("Scheduled", scheduled.length, "Cards with target deadlines")}
         ${metric("Ready Soon", active.filter((card) => ["editing", "scheduled"].includes(card.stage)).length, "Close to upload")}
       </div>
     </div>
@@ -2400,17 +2411,37 @@
   function parseTargetDate(value) {
     if (!value) return null;
     const text = String(value).trim();
+    const isoDateTime = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(text) ? new Date(text) : null;
+    if (isoDateTime && !Number.isNaN(isoDateTime.getTime())) return isoDateTime;
+    const isoDateSpaceTime = /^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(text) ? new Date(text.replace(" ", "T")) : null;
+    if (isoDateSpaceTime && !Number.isNaN(isoDateSpaceTime.getTime())) return isoDateSpaceTime;
     const iso = /^\d{4}-\d{2}-\d{2}$/.test(text) ? new Date(`${text}T00:00:00`) : null;
     if (iso && !Number.isNaN(iso.getTime())) return iso;
     const withYear = new Date(`${text} 2026`);
     return Number.isNaN(withYear.getTime()) ? null : withYear;
   }
-  function dateInputValue(value) {
+  function dateTimeInputValue(value) {
     const date = parseTargetDate(value);
     if (!date) return "";
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
-    return `${date.getFullYear()}-${month}-${day}`;
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${date.getFullYear()}-${month}-${day}T${hours}:${minutes}`;
+  }
+  function formatDeadlineTime(date) {
+    return new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
+  }
+  function formatTargetDeadline(value) {
+    const date = parseTargetDate(value);
+    if (!date) return value || "not set";
+    return new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false
+    }).format(date);
   }
   function plannerTeamContent() {
     const categories = ["all", ...new Set(state.hubLinks.map((link) => link.category))];
@@ -2467,10 +2498,18 @@
     </article>`;
   }
   function visibleNotifications() {
-    if (state.session?.role === "owner") return state.notifications;
+    return state.notifications.filter(notificationVisibleForSession);
+  }
+  function notificationVisibleForSession(note = {}) {
+    if (state.session?.role === "owner") {
+      if (note.audience) return note.audience === "owner";
+      return !note.memberId || note.memberId === "owner-kirtish" || note.memberName === "Kirtish" || note.memberName === "Owner";
+    }
     const memberId = state.session?.memberId || "";
     const name = state.session?.name || "";
-    return state.notifications.filter((note) => !note.memberId || note.memberId === memberId || note.memberName === name);
+    if (note.audience === "owner") return false;
+    if (note.audience === "member") return note.memberId === memberId || note.memberName === name;
+    return !note.memberId || note.memberId === memberId || note.memberName === name;
   }
   function updateNotificationBadge() {
     const count = visibleNotifications().filter((note) => !note.read).length;
@@ -2494,6 +2533,7 @@
         <div class="notification-list">${notes.slice(0, 20).map(notificationItem).join("") || `<div class="empty">No notifications for this login yet.</div>`}</div>
         <div class="modal-actions">
           <button class="ghost-btn" data-mark-visible-read type="button">Mark Visible Read</button>
+          <button class="danger-btn" data-dismiss-visible type="button" ${notes.length ? "" : "disabled"}>Dismiss All</button>
           <button class="primary-btn" data-close type="button">Done</button>
         </div>
       </div>`;
@@ -2503,6 +2543,13 @@
       const visibleIds = new Set(notes.map((note) => note.id));
       state.notifications = state.notifications.map((note) => visibleIds.has(note.id) ? { ...note, read: true } : note);
       saveNotifications();
+      openNotificationsModal();
+    });
+    $("[data-dismiss-visible]", root)?.addEventListener("click", () => {
+      const visibleIds = new Set(notes.map((note) => note.id));
+      state.notifications = state.notifications.filter((note) => !visibleIds.has(note.id));
+      saveNotifications();
+      toast("Visible notifications dismissed.");
       openNotificationsModal();
     });
     bindNotificationActions(root, openNotificationsModal);
@@ -2556,8 +2603,16 @@
     $all("[data-edit-member]").forEach((btn) => btn.addEventListener("click", () => openTeamMemberModal(state.teamMembers.find((member) => member.id === btn.dataset.editMember))));
     $all("[data-delete-member]").forEach((btn) => btn.addEventListener("click", () => deleteTeamMember(btn.dataset.deleteMember)));
     $("[data-clear-notifications]")?.addEventListener("click", () => {
-      state.notifications = state.notifications.map((note) => ({ ...note, read: true }));
+      const visibleIds = new Set(visibleNotifications().map((note) => note.id));
+      state.notifications = state.notifications.map((note) => visibleIds.has(note.id) ? { ...note, read: true } : note);
       saveNotifications();
+      renderTeam();
+    });
+    $("[data-dismiss-visible-notifications]")?.addEventListener("click", () => {
+      const visibleIds = new Set(visibleNotifications().map((note) => note.id));
+      state.notifications = state.notifications.filter((note) => !visibleIds.has(note.id));
+      saveNotifications();
+      toast("Visible notifications dismissed.");
       renderTeam();
     });
     bindNotificationActions(document, renderTeam);
@@ -2593,7 +2648,7 @@
           <div class="access-note">The code is sent to the Vercel API and stored in Supabase as a hash. It is never saved in browser local storage and cannot be viewed later.</div>
         </div>
         <div class="modal-section">
-          <label class="sponsor-toggle"><input name="notifyStages" type="checkbox" ${current.notifyStages !== false ? "checked" : ""}> Notify this member when assigned card changes stage</label>
+          <label class="sponsor-toggle"><input name="notifyStages" type="checkbox" ${current.notifyStages !== false ? "checked" : ""}> Send owner progress alerts when this member moves assigned cards</label>
         </div>
         <div class="modal-actions"><button class="ghost-btn" data-close type="button">Cancel</button><button class="primary-btn" type="submit">Save User</button></div>
       </form>`;
@@ -2728,7 +2783,7 @@
     return `<article class="list-card pipeline-card pipeline-${tone} priority-${priority}" data-card="${card.id}">
       <div class="card-actions"><span class="tag ${priority === "urgent" ? "red" : priority === "high" ? "gold" : "blue"}">${priority === "urgent" ? "🔴" : priority === "high" ? "🟡" : "⚪"} ${escapeHTML(card.priority || "Medium")}</span><span class="tag teal">${stageEmoji(card.stage)} ${escapeHTML(stageLabel(card.stage))}</span>${card.assignedTo ? `<span class="tag ${assigneeClass}">👤 ${escapeHTML(assigneeName || "Unknown owner")}</span>` : `<span class="tag red">👤 Unassigned</span>`}</div>
       <h4>${escapeHTML(withLeadingEmoji(card.title, emoji))}</h4>
-      <div class="panel-sub">${escapeHTML(card.category)} | Target ${escapeHTML(card.target || "not set")}</div>
+      <div class="panel-sub">${escapeHTML(card.category)} | Deadline ${escapeHTML(formatTargetDeadline(card.target))}</div>
       <div class="panel-sub">Source: ${escapeHTML(card.source || "Manual")}${card.sourceUrl ? ` · <button class="source-action-link" data-open-url="${escapeHTML(card.sourceUrl)}" onclick="window.open(this.dataset.openUrl, '_blank', 'noopener,noreferrer');return false;" type="button">open ↗</button>` : ""}</div>
       ${card.sponsor ? `<div class="card-actions"><span class="tag gold">💰 Sponsor: ${escapeHTML(card.sponsor)}</span></div>` : ""}
       ${brief ? `<p>${escapeHTML(brief).slice(0, 120)}${String(brief).length > 120 ? "..." : ""}</p>` : ""}
@@ -2776,12 +2831,14 @@
     const previousStage = card.stage;
     card.stage = STAGES[Math.max(0, Math.min(STAGES.length - 1, index + delta))][0];
     savePipeline();
-    const assignee = state.teamMembers.find((member) => member.id === card.assignedTo);
-    if (card.assignedTo && assignee?.notifyStages !== false && previousStage !== card.stage) {
+    const actor = currentSessionMember();
+    const isTeamProgress = state.session?.role !== "owner" && actor?.notifyStages !== false && previousStage !== card.stage;
+    if (isTeamProgress) {
       createNotification({
         card,
         type: "stage",
-        message: `${card.title} moved to ${stageLabel(card.stage)}.`
+        audience: "owner",
+        message: `${actor?.name || state.session?.name || "Team"} moved "${card.title}" to ${stageLabel(card.stage)}.`
       });
     }
     persistBoardNow({ force: true });
@@ -2850,7 +2907,7 @@
             <label>Stage<select name="stage">${STAGES.map(([key, label]) => `<option value="${key}" ${current.stage === key ? "selected" : ""}>${label}</option>`).join("")}</select></label>
             ${categoryField("category", categoryOptions, current.category)}
             <label>Priority<select name="priority">${["Urgent", "High", "Medium"].map((p) => `<option ${current.priority === p ? "selected" : ""}>${p}</option>`).join("")}</select></label>
-            <label>Target date<input name="target" type="date" value="${escapeHTML(dateInputValue(current.target))}"></label>
+            <label>Target deadline<input name="target" type="datetime-local" value="${escapeHTML(dateTimeInputValue(current.target))}"></label>
             <label>Assign to<select name="assignedTo"><option value="">Unassigned</option>${teamMemberOptions(current.assignedTo)}</select></label>
           </div>
           <div class="modal-section">
@@ -2918,6 +2975,7 @@
         createNotification({
           card: next,
           type: editing ? "assignment" : "new-card",
+          audience: "member",
           message: editing ? `${next.title} assigned to you.` : `${next.title} added to planner and assigned to you.`
         });
       }
@@ -3009,7 +3067,8 @@
   }
 
   function renderTeam() {
-    const unread = state.notifications.filter((note) => !note.read).length;
+    const visibleNotes = visibleNotifications();
+    const unread = visibleNotes.filter((note) => !note.read).length;
     const emailReady = state.teamMembers.filter((member) => normalizeChannels(member).includes("Email") && member.email).length;
     $("#team").innerHTML = `
       <section class="page-hero team-page-hero">
@@ -3034,9 +3093,12 @@
       <div class="panel team-notification-panel">
         <div class="panel-head">
           <div><h3>🔔 Notification Board</h3><div class="panel-sub">${unread} unread · In-app alerts are live. Email delivery uses the Vercel notification endpoint when configured.</div></div>
-          <button class="ghost-btn" data-clear-notifications type="button">Mark All Read</button>
+          <div class="card-actions">
+            <button class="ghost-btn" data-clear-notifications type="button">Mark All Read</button>
+            <button class="danger-btn" data-dismiss-visible-notifications type="button" ${visibleNotes.length ? "" : "disabled"}>Dismiss All</button>
+          </div>
         </div>
-        <div class="notification-list">${state.notifications.slice(0, 12).map(notificationItem).join("") || `<div class="empty">No planner notifications yet.</div>`}</div>
+        <div class="notification-list">${visibleNotes.slice(0, 12).map(notificationItem).join("") || `<div class="empty">No planner notifications yet.</div>`}</div>
       </div>`;
     bindTeamAccess();
   }

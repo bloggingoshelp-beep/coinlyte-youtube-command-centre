@@ -8,9 +8,9 @@ For future Codex, Claude, Gemini, or human maintainers: read `HANDOVER.md` first
 
 - Shows a daily Command board for the next video decision, blockers, team ownership, and sponsor watch.
 - Tracks YouTube analytics, latest uploads, audience comments, competitor signals, market intelligence, and AI-generated video ideas.
-- Converts ideas into Content Planner cards with source links, locked research briefs, editor reference sources, assignees, target dates, and stage movement.
+- Converts ideas into Content Planner cards with source links, locked research briefs, editor reference sources, assignees, target date/time deadlines, and stage movement.
 - Tracks Brand Deals and sponsor records.
-- Supports Team Access, app-area permissions, hashed team login codes via Supabase, in-app notifications with dismiss/read controls, and optional email notifications.
+- Supports Team Access, app-area permissions, hashed team login codes via Supabase, role-aware in-app notifications with read/dismiss/dismiss-all controls, and optional email notifications.
 - Production login now uses a User ID plus access code. Owners can use `Mrvyas`, `owner`, or `kirtish` by default; team users use the User ID created in Team Access.
 - Provides owner reliability controls: planner backup/import, brand backup/import, owner settings, and logout.
 - Separates lightweight board sync from the full live-data refresh: Sync Board pulls shared Planner, Brand Deals, Team Access, notifications, and dismissals without rebuilding YouTube/news/comment intelligence.
