@@ -122,8 +122,8 @@ if (!files.notify.includes("requireSession") || files.notify.includes("requireOw
 if (!files.vercel?.includes('/api/notify')) {
   throw new Error("Vercel must route /api/notify to the email notification function.");
 }
-if (!files.vercel?.includes("qa-reports/**")) {
-  throw new Error("Vercel static function must bundle QA report files.");
+if (!files.vercel?.includes('"includeFiles": "assets/**"')) {
+  throw new Error("Vercel static function must bundle dashboard assets with a schema-valid includeFiles string.");
 }
 if (!files.qaReport.includes("YouTube Command Centre Test Report") || !files.deployedQaReport.includes("YouTube Command Centre Test Report")) {
   throw new Error("QA report and deployed asset copy must be present.");
