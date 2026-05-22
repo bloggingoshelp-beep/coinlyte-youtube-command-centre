@@ -16,6 +16,8 @@ const files = {
   teamUser: await readFile(new URL("api/team-user.js", root), "utf8"),
   db: await readFile(new URL("api/db.js", root), "utf8"),
   staticGate: await readFile(new URL("api/static.js", root), "utf8"),
+  qaReport: await readFile(new URL("qa-reports/coinlyte-command-centre-qa-report-2026-05-22.html", root), "utf8"),
+  deployedQaReport: await readFile(new URL("assets/reports/coinlyte-command-centre-qa-report-2026-05-22.html", root), "utf8"),
   workflow: await readFile(new URL(".github/workflows/refresh.yml", root), "utf8"),
   refreshScript: await readFile(new URL(".github/scripts/refresh.py", root), "utf8"),
   liveData: await readFile(new URL("assets/live-data.js", root), "utf8"),
@@ -121,6 +123,9 @@ if (!files.vercel?.includes('/api/notify')) {
 }
 if (!files.vercel?.includes("qa-reports/**")) {
   throw new Error("Vercel static function must bundle QA report files.");
+}
+if (!files.qaReport.includes("YouTube Command Centre Test Report") || !files.deployedQaReport.includes("YouTube Command Centre Test Report")) {
+  throw new Error("QA report and deployed asset copy must be present.");
 }
 if (!files.refreshScript.includes("assets/live-data.js")) {
   throw new Error("Refresh script must write the live data asset.");
