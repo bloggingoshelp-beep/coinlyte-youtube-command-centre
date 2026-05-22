@@ -1,7 +1,7 @@
 import { createReadStream, statSync } from "node:fs";
 import { extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseSession } from "./auth.js";
+import { getCurrentSession } from "./auth.js";
 
 const root = resolve(fileURLToPath(new URL("../", import.meta.url)));
 const types = {
@@ -24,7 +24,7 @@ function sendFile(res, filePath) {
   createReadStream(filePath).pipe(res);
 }
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   const url = new URL(req.url, "https://coinlyte.local");
   const pathname = url.pathname === "/" ? "/index.html" : url.pathname;
 
@@ -32,9 +32,10 @@ export default function handler(req, res) {
     return sendFile(res, join(root, "login.html"));
   }
 
-  const session = parseSession(req);
+  const session = await getCurrentSession(req);
   if (!session && !pathname.startsWith("/assets/brand/")) {
     res.statusCode = 302;
+    res.setHeader("Set-Cookie", "cl_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0");
     res.setHeader("Location", "/login.html");
     return res.end();
   }

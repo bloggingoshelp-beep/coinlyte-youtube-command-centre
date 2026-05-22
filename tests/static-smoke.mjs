@@ -80,8 +80,8 @@ if (!files.login.includes("process.env.OWNER_ACCESS_CODE")) {
 if (!files.auth.includes("cl_session") || !files.auth.includes("timingSafeEqual")) {
   throw new Error("Auth helper must validate the signed owner cookie.");
 }
-if (!files.staticGate.includes("parseSession") || !files.staticGate.includes("login.html")) {
-  throw new Error("Static gate must protect dashboard files behind login.");
+if (!files.staticGate.includes("getCurrentSession") || !files.staticGate.includes("login.html")) {
+  throw new Error("Static gate must protect dashboard files behind live login/session status.");
 }
 if (!files.login.includes("listTeamUsers") || !files.login.includes("verifyAccessCode")) {
   throw new Error("Login endpoint must support hashed team access codes.");

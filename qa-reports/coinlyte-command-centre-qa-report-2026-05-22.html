@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CoinLyte Command Centre QA Report - 22 May 2026</title>
+  <style>
+    :root {
+      --ink: #16233d;
+      --muted: #5c6b86;
+      --line: #dfd8cf;
+      --paper: #f7f4ef;
+      --card: #ffffff;
+      --navy: #172344;
+      --green: #0b9f6a;
+      --amber: #c78316;
+      --red: #c83f38;
+      --violet: #6d5df5;
+      --blue: #1d7eea;
+      --shadow: 0 16px 36px rgba(22, 35, 61, 0.11);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      line-height: 1.55;
+    }
+    .hero {
+      background: linear-gradient(120deg, #19124a 0%, #172344 52%, #06382f 100%);
+      color: #fff;
+      padding: 42px 32px;
+      border-bottom: 4px solid #d49a29;
+    }
+    .wrap { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 12px;
+      font-weight: 800;
+      color: #d49a29;
+      margin: 0 0 10px;
+    }
+    h1, h2, h3 { margin: 0; line-height: 1.15; }
+    h1 { font-size: clamp(34px, 5vw, 58px); max-width: 920px; }
+    h2 { font-size: 26px; margin-bottom: 10px; }
+    h3 { font-size: 18px; margin-bottom: 8px; }
+    p { margin: 0 0 12px; }
+    .hero p { color: rgba(255,255,255,0.78); max-width: 900px; font-size: 18px; margin-top: 16px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.22);
+      color: #fff;
+      font-weight: 750;
+      font-size: 14px;
+    }
+    main { padding: 28px 0 52px; }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+    .span-12 { grid-column: span 12; }
+    .span-8 { grid-column: span 8; }
+    .span-6 { grid-column: span 6; }
+    .span-4 { grid-column: span 4; }
+    .stat {
+      border-top: 4px solid var(--green);
+      min-height: 130px;
+    }
+    .stat.amber { border-color: var(--amber); }
+    .stat.red { border-color: var(--red); }
+    .stat.blue { border-color: var(--blue); }
+    .stat.violet { border-color: var(--violet); }
+    .big { font-size: 34px; font-weight: 900; margin-bottom: 4px; }
+    .label { color: var(--muted); font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .pass { background: #dcfce7; color: #047857; }
+    .fixed { background: #e0f2fe; color: #075985; }
+    .watch { background: #fff7ed; color: #9a3412; }
+    .notrun { background: #f1f5f9; color: #475569; }
+    table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 8px; }
+    th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #ece7df; vertical-align: top; }
+    th { background: #172344; color: #fff; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
+    tr:last-child td { border-bottom: 0; }
+    code {
+      background: #eef2ff;
+      color: #1e2a5a;
+      padding: 2px 6px;
+      border-radius: 5px;
+      font-size: 0.94em;
+    }
+    .note {
+      border-left: 5px solid var(--amber);
+      background: #fff7ed;
+      padding: 16px;
+      border-radius: 8px;
+      color: #643d09;
+      font-weight: 650;
+    }
+    .okline {
+      display: grid;
+      grid-template-columns: 170px 1fr;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid #ece7df;
+    }
+    .okline:last-child { border-bottom: 0; }
+    .timeline { display: grid; gap: 12px; }
+    .timeline-item {
+      border-left: 4px solid var(--green);
+      padding: 10px 12px;
+      background: #f8fafc;
+      border-radius: 8px;
+    }
+    .timeline-item.fixed-border { border-color: var(--blue); }
+    .timeline-item.warn-border { border-color: var(--amber); }
+    ul { margin: 10px 0 0; padding-left: 22px; }
+    li { margin: 6px 0; }
+    .footer { color: var(--muted); font-size: 13px; text-align: center; padding: 24px 0 0; }
+    @media (max-width: 860px) {
+      .span-8, .span-6, .span-4 { grid-column: span 12; }
+      .okline { grid-template-columns: 1fr; }
+      th, td { display: block; width: 100%; }
+      th { display: none; }
+      tr { display: block; border: 1px solid #ece7df; border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
+      td { border-bottom: 1px solid #ece7df; }
+      td::before { content: attr(data-label); display: block; font-size: 12px; font-weight: 900; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <p class="eyebrow">CoinLyte QA + Security Review</p>
+      <h1>YouTube Command Centre Test Report</h1>
+      <p>End-to-end frontend, backend, access-control, sync, and operational workflow review for the production CoinLyte Command Centre.</p>
+      <div class="chips">
+        <span class="chip">Date: 22 May 2026</span>
+        <span class="chip">Environment: Production + local verification</span>
+        <span class="chip">Result: Pass after fixes</span>
+        <span class="chip">Prepared for: future Codex, Claude, or Gemini handover</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="grid">
+      <div class="card stat span-4">
+        <div class="label">Overall QA Status</div>
+        <div class="big">Pass</div>
+        <p>Core owner/team app flows are working after the permission hardening fixes.</p>
+      </div>
+      <div class="card stat blue span-4">
+        <div class="label">Issues Fixed During QA</div>
+        <div class="big">2</div>
+        <p>Restricted hidden-view leakage and stale-cookie static access were corrected.</p>
+      </div>
+      <div class="card stat amber span-4">
+        <div class="label">Manual Watch Items</div>
+        <div class="big">2</div>
+        <p>Email delivery and full data refresh should be periodically verified with real credentials and quota available.</p>
+      </div>
+    </section>
+
+    <section class="grid" style="margin-top:16px;">
+      <div class="card span-8">
+        <h2>Executive Summary</h2>
+        <p>The application is now operating as a real browser-based command centre: users log in with User ID plus access code, team access is controlled from Supabase-backed records, planner and brand boards sync through the server API, and live YouTube/news intelligence is generated through the GitHub refresh workflow.</p>
+        <p>During this QA pass I found and fixed one important frontend permission issue: restricted tabs were visually hidden, but old hidden DOM content could remain after a team user navigated between areas. I also tightened the static file route so a paused or deleted team user cannot keep using an old signed cookie to fetch the app shell.</p>
+        <div class="note">No real secret values, access codes, GitHub tokens, Google credentials, Supabase service keys, Anthropic keys, or Resend keys were written into this report or committed frontend files.</div>
+      </div>
+      <div class="card span-4">
+        <h2>Current Architecture</h2>
+        <div class="okline"><strong>Frontend</strong><span>Static HTML/CSS/JavaScript served by Vercel.</span></div>
+        <div class="okline"><strong>Backend</strong><span>Vercel Serverless API routes under <code>/api</code>.</span></div>
+        <div class="okline"><strong>Database</strong><span>Supabase tables <code>app_state</code> and <code>team_users</code>.</span></div>
+        <div class="okline"><strong>Refresh Engine</strong><span>GitHub Actions runs <code>.github/scripts/refresh.py</code> and commits <code>assets/live-data.js</code>.</span></div>
+        <div class="okline"><strong>Email</strong><span>Resend via <code>/api/notify</code> when configured.</span></div>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:16px;">
+      <h2>Test Matrix</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Area</th>
+            <th>What Was Tested</th>
+            <th>Result</th>
+            <th>Evidence / Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Area">Unauthenticated access</td>
+            <td data-label="What Was Tested">Opening production root without a valid session.</td>
+            <td data-label="Result"><span class="status pass">Pass</span></td>
+            <td data-label="Evidence / Notes">Production returned <code>302</code> to <code>/login.html</code>.</td>
+          </tr>
+          <tr>
+            <td data-label="Area">API protection</td>
+            <td data-label="What Was Tested"><code>/api/board</code> and <code>/api/team-user</code> without a session.</td>
+            <td data-label="Result"><span class="status pass">Pass</span></td>
+            <td data-label="Evidence / Notes"><code>/api/board</code> returned <code>401 Login required</code>; <code>/api/team-user</code> returned <code>401 Owner access required</code>.</td>
+          </tr>
+          <tr>
+            <td data-label="Area">Static app protection</td>
+            <td data-label="What Was Tested">Direct asset access without login.</td>
+            <td data-label="Result"><span class="status pass">Pass</span></td>
+            <td data-label="Evidence / Notes">Protected assets redirect to login. Brand logo remains public so the login page can display correctly.</td>
+          </tr>
+          <tr>
+            <td data-label="Area">Team login</td>
+            <td data-label="What Was Tested">Production login using a real test team account.</td>
+            <td data-label="Result"><span class="status pass">Pass</span></td>
+            <td data-label="Evidence / Notes">Team dashboard loaded and displayed only permitted top-level app tabs.</td>
+          </tr>
+          <tr>
+            <td data-label="Area">Team permissions</td>
+            <td data-label="What Was Tested">Visible nav, hidden restricted nav, and hidden restricted section content.</td>
+            <td data-label="Result"><span class="status fixed">Fixed + Pass</span></td>
+            <td data-label="Evidence / Notes">Restricted Analytics, Team Access, and Refresh controls are hidden and disabled; their sections are empty for the tested team user.</td>
+          </tr>
+          <tr>
+            <td data-label="Area">Command Centre</td>
+            <td data-label="What Was Tested">Dashboard loads live data, quick actions, owner queue, and latest upload card.</td>
+            <td data-label="Result"><span class="status pass">Pass</span></td>
+            <td data-label="Evidence / Notes">Production rendered team command workspace, live data date, quick stats, notifications, and allowed navigation.</td>
+          </tr>
+          <tr>
+            <td data-label="Area">Content Planner</td>
+            <td data-label="What Was Tested">Default board view, assigned names, columns, backup/import buttons, edit modal, research brief, source open control.</td>
+            <td data-label="Result"><span class="status pass">Pass</span></td>
+            <td data-label="Evidence / Notes">Planner opened in board mode with Ideas, Research, Recording, Editing, Scheduled, Published lanes. Edit modal included source-backed research brief, Add Source, and Save Video.</td>
+          </tr>
+          <tr>
+            <td data-label="Area">Source links</td>
+            <td data-label="What Was Tested">Planner and News Radar source-link behavior.</td>
+            <td data-label="Result"><span class="status pass">Pass</span></td>
+            <td data-label="Evidence / Notes">News links use <code>target="_blank"</code> with <code>rel="noreferrer"</code>. Planner source buttons use <code>window.open(..., "_blank", "noopener,noreferrer")</code>.</td>
+          </tr>
+          <tr>
+            <td data-label="Area">Channel Intelligence</td>
+            <td data-label="What Was Tested">High-level tabs and News Radar source-only workflow.</td>
+            <td data-label="Result"><span class="status pass">Pass</span></td>
+            <td data-label="Evidence / Notes">News Radar rendered source links, Save Radar, and Dismiss controls. Market/competitor/community sections remain available behind the intelligence app.</td>
+          </tr>
+          <tr>
+            <td data-label="Area">Saved Radar</td>
+            <td data-label="What Was Tested">Saving one radar item and viewing it in Content Planner.</td>
+            <td data-label="Result"><span class="status pass">Pass</span></td>
+            <td data-label="Evidence / Notes">Saved Radar count updated and the saved item appeared in Content Planner with Open Source and Remove options.</td>
+          </tr>
+          <tr>
+            <td data-label="Area">Brand Deals</td>
+            <td data-label="What Was Tested">Brand Directory, Deal Board, backup/import controls, add/edit modal structure.</td>
+            <td data-label="Result"><span class="status pass">Pass</span></td>
+            <td data-label="Evidence / Notes">Brand board rendered records and deal stages. Add Brand Record modal includes category, communication, currency, deal type, deadline, and save controls.</td>
+          </tr>
+          <tr>
+            <td data-label="Area">Notifications</td>
+            <td data-label="What Was Tested">Global notification icon and empty notification state.</td>
+            <td data-label="Result"><span class="status pass">Pass</span></td>
+            <td data-label="Evidence / Notes">Notification inbox opens from the top bar, supports mark-read flow, and is available outside Team Access.</td>
+          </tr>
+          <tr>
+            <td data-label="Area">Team profile menu</td>
+            <td data-label="What Was Tested">Team account menu.</td>
+            <td data-label="Result"><span class="status pass">Pass</span></td>
+            <td data-label="Evidence / Notes">Team user sees account info and Logout only; owner settings are not shown.</td>
+          </tr>
+          <tr>
+            <td data-label="Area">Email notification</td>
+            <td data-label="What Was Tested">Code/config path review.</td>
+            <td data-label="Result"><span class="status watch">Config-dependent</span></td>
+            <td data-label="Evidence / Notes"><code>/api/notify</code> requires login and uses <code>RESEND_API_KEY</code> plus <code>NOTIFY_FROM</code>. A real send was not forced in this QA run to avoid sending unintended email to a live team member.</td>
+          </tr>
+          <tr>
+            <td data-label="Area">Full live refresh</td>
+            <td data-label="What Was Tested">Refresh architecture and access protection.</td>
+            <td data-label="Result"><span class="status watch">Quota-dependent</span></td>
+            <td data-label="Evidence / Notes">Refresh API is owner-only and the GitHub workflow is configured to generate live data. I did not trigger a full refresh during this QA pass to avoid consuming YouTube/Claude/news quota unnecessarily.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="grid" style="margin-top:16px;">
+      <div class="card span-6">
+        <h2>Issues Found And Fixed</h2>
+        <div class="timeline">
+          <div class="timeline-item fixed-border">
+            <h3>Restricted hidden DOM content</h3>
+            <p><strong>Finding:</strong> a limited team user could only see allowed nav tabs, but old hidden content from restricted sections could remain in the DOM after navigation.</p>
+            <p><strong>Fix:</strong> added restricted-view clearing and unauthorized action scrubbing in the frontend render flow. Restricted nav buttons are now hidden, disabled, and their content is emptied.</p>
+          </div>
+          <div class="timeline-item fixed-border">
+            <h3>Static route used stale cookie check</h3>
+            <p><strong>Finding:</strong> static files were protected by signed cookie validation only, not by the latest Supabase team-user status.</p>
+            <p><strong>Fix:</strong> the static route now uses the live session lookup. Paused or removed users are redirected to login and the old session cookie is cleared.</p>
+          </div>
+        </div>
+      </div>
+      <div class="card span-6">
+        <h2>Security Review</h2>
+        <div class="okline"><strong>Secrets in frontend</strong><span><span class="status pass">Pass</span> Search found no committed real GitHub, Google, Anthropic, Resend, Supabase service-role, or owner access-code values in frontend files.</span></div>
+        <div class="okline"><strong>Owner-only APIs</strong><span><span class="status pass">Pass</span> Team-user management and refresh endpoints require owner session.</span></div>
+        <div class="okline"><strong>Team writes</strong><span><span class="status pass">Pass</span> Board writes are field-filtered by allowed app areas.</span></div>
+        <div class="okline"><strong>Session updates</strong><span><span class="status fixed">Fixed</span> Server now checks live team status for static app files as well as API calls.</span></div>
+        <div class="okline"><strong>Remaining design note</strong><span><span class="status watch">Watch</span> Live intelligence data is still delivered as a static authenticated asset. If you later need strict per-tab data isolation, split live data into area-specific API responses.</span></div>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:16px;">
+      <h2>How The Platform Works</h2>
+      <div class="grid">
+        <div class="span-6">
+          <h3>Daily app usage</h3>
+          <ul>
+            <li>Users open the browser app and log in with User ID plus access code.</li>
+            <li>The app asks <code>/api/me</code> who the user is and which high-level boards they can open.</li>
+            <li>The visible tabs are built from that access list.</li>
+            <li>Planner, Brand Deals, Saved Radar, notifications, dismissed items, and team records sync through <code>/api/board</code> and Supabase.</li>
+            <li>Sync Board pulls the newest shared board state without running the full YouTube/news/AI refresh.</li>
+          </ul>
+        </div>
+        <div class="span-6">
+          <h3>Live intelligence refresh</h3>
+          <ul>
+            <li>Refresh Live Data is an owner workflow, not a normal team sync button.</li>
+            <li>The Vercel API asks GitHub Actions to run the refresh workflow.</li>
+            <li>The workflow reads YouTube, comments, analytics, competitor feeds, news RSS, and Anthropic/Claude generation where configured.</li>
+            <li>The workflow writes <code>assets/live-data.js</code> and <code>assets/refresh-status.json</code>, commits them, and optionally triggers Vercel redeploy through the deploy hook.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid" style="margin-top:16px;">
+      <div class="card span-4">
+        <h2>Required Vercel Variables</h2>
+        <ul>
+          <li><code>OWNER_ACCESS_CODE</code></li>
+          <li><code>OWNER_USER_IDS</code></li>
+          <li><code>AUTH_COOKIE_SECRET</code></li>
+          <li><code>GH_PAT</code></li>
+          <li><code>SUPABASE_URL</code></li>
+          <li><code>SUPABASE_SERVICE_ROLE_KEY</code></li>
+          <li><code>RESEND_API_KEY</code></li>
+          <li><code>NOTIFY_FROM</code></li>
+        </ul>
+      </div>
+      <div class="card span-4">
+        <h2>GitHub Secrets</h2>
+        <ul>
+          <li><code>YT_CLIENT_ID</code></li>
+          <li><code>YT_CLIENT_SECRET</code></li>
+          <li><code>YT_REFRESH_TOKEN</code></li>
+          <li><code>YOUTUBE_API_KEY</code></li>
+          <li><code>ANTHROPIC_API_KEY</code></li>
+          <li><code>VERCEL_DEPLOY_HOOK</code></li>
+        </ul>
+      </div>
+      <div class="card span-4">
+        <h2>Backup Plan</h2>
+        <ul>
+          <li>Planner backup exports the board JSON before risky edits.</li>
+          <li>Brand backup exports brand/deal state separately.</li>
+          <li>Supabase keeps shared board state across devices.</li>
+          <li>Git history can restore app code to an earlier commit.</li>
+          <li>Vercel deployments can be rolled back from the Vercel dashboard.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:16px;">
+      <h2>Recommended Future QA Gates</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Gate</th>
+            <th>Why It Matters</th>
+            <th>How To Test</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Gate">Permission regression test</td>
+            <td data-label="Why It Matters">Team access is the main business security boundary.</td>
+            <td data-label="How To Test">Create one limited team user, log in, confirm only allowed tabs are visible and restricted sections are empty.</td>
+          </tr>
+          <tr>
+            <td data-label="Gate">Email delivery test</td>
+            <td data-label="Why It Matters">Assignments should reach team members outside the app.</td>
+            <td data-label="How To Test">Use a test team user with email enabled, assign a test card, move its stage, and confirm Resend shows <code>sent</code>.</td>
+          </tr>
+          <tr>
+            <td data-label="Gate">Refresh dry run</td>
+            <td data-label="Why It Matters">Live ideas depend on GitHub Actions, YouTube scopes, RSS feeds, and Claude generation.</td>
+            <td data-label="How To Test">Run the GitHub Action manually, inspect logs, verify <code>assets/live-data.js</code> changed, then confirm Vercel redeployed.</td>
+          </tr>
+          <tr>
+            <td data-label="Gate">Backup restore drill</td>
+            <td data-label="Why It Matters">A future AI edit or manual mistake should not destroy operating data.</td>
+            <td data-label="How To Test">Export planner and brand backups, make a temporary change, import the backup, and verify state returns.</td>
+          </tr>
+          <tr>
+            <td data-label="Gate">Mobile smoke check</td>
+            <td data-label="Why It Matters">Team members may use phones/tablets.</td>
+            <td data-label="How To Test">Open Command, Planner, News Radar, notification drawer, and profile/logout on a narrow viewport.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card" style="margin-top:16px;">
+      <h2>Residual Risks And Honest Notes</h2>
+      <ul>
+        <li><strong>Email delivery:</strong> the server route and required environment variables are in place, but this QA pass did not send a real email to avoid unintended live team communication.</li>
+        <li><strong>Full refresh:</strong> the workflow path is in place and previously working, but this QA pass did not trigger a fresh YouTube/news/Claude run because it consumes external quota and may produce production data changes.</li>
+        <li><strong>Per-tab data isolation:</strong> current production protects the app behind login and filters board sync fields by user access. If future team roles require strict separation of intelligence datasets, the static live-data asset should be replaced by role-filtered API endpoints.</li>
+        <li><strong>Owner credential test:</strong> owner-only backend behavior was verified by code/API protection. Interactive owner login was not repeated in this pass because the current active browser session was a limited team session.</li>
+      </ul>
+    </section>
+
+    <section class="card" style="margin-top:16px;">
+      <h2>Files Updated In This QA Pass</h2>
+      <ul>
+        <li><code>api/static.js</code> - changed static file protection from signed-cookie-only to live session validation.</li>
+        <li><code>tests/static-smoke.mjs</code> - updated the regression test so future agents keep the stronger static gate.</li>
+        <li><code>qa-reports/coinlyte-command-centre-qa-report-2026-05-22.html</code> - this review artifact.</li>
+      </ul>
+    </section>
+
+    <div class="footer">
+      CoinLyte Command Centre QA report generated for operational handover. Keep this with the repo so future AI agents can understand what was tested, what was fixed, and what must not be broken.
+    </div>
+  </main>
+</body>
+</html>
