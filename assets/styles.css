@@ -1691,8 +1691,25 @@ th { color: var(--muted); font-size: .74rem; text-transform: uppercase; }
   background: #fff;
 }
 .reference-row.reference-saved {
+  grid-template-columns: minmax(0, 1fr) auto;
   border-color: #8ee6c3;
   background: #f2fff9;
+}
+.reference-source-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 4px 2px;
+}
+.reference-source-label {
+  min-width: 0;
+  color: var(--ink);
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .reference-save-btn {
   min-height: 31px;
@@ -1702,6 +1719,15 @@ th { color: var(--muted); font-size: .74rem; text-transform: uppercase; }
   background: var(--green-soft);
   color: #006644;
   font-weight: 900;
+}
+.reference-edit-btn {
+  min-height: 31px;
+  padding: 6px 12px;
+  border: 1px solid #d5c8ff;
+  border-radius: var(--radius);
+  background: #f1edff;
+  color: var(--violet);
+  font-weight: 950;
 }
 .mini-add-btn {
   min-height: 24px;

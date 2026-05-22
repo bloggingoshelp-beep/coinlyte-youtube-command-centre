@@ -58,7 +58,7 @@ npm test
 - Category and priority are dropdowns.
 - Target date uses date picker.
 - Research brief is read-only when created from intelligence.
-- Editor reference source can be added with title and URL.
+- Editor reference source can be added with title and URL; clicking row Save converts it into a locked source row with a Source link and Edit button.
 - Source buttons open in a new tab.
 - Saved Radar source buttons open in a new tab.
 - Moving stages creates notifications for assigned team members.

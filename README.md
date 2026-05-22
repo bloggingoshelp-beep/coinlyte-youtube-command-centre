@@ -74,6 +74,7 @@ For the detailed functional checklist, use `TESTING.md`.
 - Do not rename localStorage keys unless a migration is added.
 - Do not remove source-link carryover from intelligence to planner cards.
 - Source buttons must open in a new tab.
+- Editor reference sources should lock into read-only source rows after row-level Save, with Edit as the only visible row action.
 - Ideas added to Planner should disappear from loose idea lists.
 - Keep `Refresh Live Data` wired through Vercel API and GitHub Actions.
 - Keep this repo separate from the older Claude reference repo.

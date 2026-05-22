@@ -2931,23 +2931,37 @@
     return rows.map((link) => {
       const label = typeof link === "string" ? "" : link?.label || "";
       const url = typeof link === "string" ? link : link?.url || "";
-      return `<div class="reference-row">
-      <input name="referenceTitle" value="${escapeHTML(label)}" placeholder="Reference title">
-      <input name="referenceUrl" value="${escapeHTML(url)}" type="url" placeholder="https://youtube.com/... or article URL">
+      return url ? renderSavedReferenceRow({ label, url }) : renderEditableReferenceRow({ label, url });
+    }).join("");
+  }
+  function renderEditableReferenceRow(link = {}) {
+    return `<div class="reference-row reference-editing">
+      <input name="referenceTitle" value="${escapeHTML(link.label || "")}" placeholder="Reference title">
+      <input name="referenceUrl" value="${escapeHTML(link.url || "")}" type="url" placeholder="https://youtube.com/... or article URL">
       <button class="reference-save-btn" data-save-reference type="button">Save ✓</button>
       <button class="danger-btn compact-btn" data-remove-reference type="button">×</button>
     </div>`;
-    }).join("");
+  }
+  function renderSavedReferenceRow(link = {}) {
+    const label = link.label || "Additional source";
+    const url = link.url || "";
+    return `<div class="reference-row reference-saved" data-reference-saved data-reference-title="${escapeHTML(label)}" data-reference-url="${escapeHTML(url)}">
+      <div class="reference-source-card">
+        <span class="reference-source-label">${escapeHTML(label)}</span>
+        <button class="source-action-link" data-open-url="${escapeHTML(url)}" onclick="window.open(this.dataset.openUrl, '_blank', 'noopener,noreferrer');return false;" type="button">Source ↗</button>
+      </div>
+      <button class="reference-edit-btn" data-edit-reference type="button">Edit</button>
+    </div>`;
   }
   function bindReferenceRows(root) {
     const list = $("[data-reference-list]", root);
     $("[data-add-reference]", root)?.addEventListener("click", () => {
-      list.insertAdjacentHTML("beforeend", renderReferenceRows([{ label: "", url: "" }]));
-      bindReferenceRemoveButtons(root);
+      list.insertAdjacentHTML("beforeend", renderEditableReferenceRow({ label: "", url: "" }));
+      bindReferenceButtons(root);
     });
-    bindReferenceRemoveButtons(root);
+    bindReferenceButtons(root);
   }
-  function bindReferenceRemoveButtons(root) {
+  function bindReferenceButtons(root) {
     $all("[data-remove-reference]", root).forEach((btn) => {
       btn.onclick = () => {
         const row = btn.closest(".reference-row");
@@ -2957,13 +2971,37 @@
     });
     $all("[data-save-reference]", root).forEach((btn) => {
       btn.onclick = () => {
-        btn.closest(".reference-row")?.classList.add("reference-saved");
-        btn.textContent = "Saved ✓";
+        const row = btn.closest(".reference-row");
+        const label = row.querySelector('[name="referenceTitle"]')?.value.trim() || "Additional source";
+        const url = row.querySelector('[name="referenceUrl"]')?.value.trim() || "";
+        if (!url) {
+          toast("Add a source link before saving.");
+          row.querySelector('[name="referenceUrl"]')?.focus();
+          return;
+        }
+        row.outerHTML = renderSavedReferenceRow({ label, url });
+        bindReferenceButtons(root);
+        wireSourceNavigation(root);
+        toast("Source saved to this planner card.");
+      };
+    });
+    $all("[data-edit-reference]", root).forEach((btn) => {
+      btn.onclick = () => {
+        const row = btn.closest(".reference-row");
+        const label = row?.dataset.referenceTitle || "";
+        const url = row?.dataset.referenceUrl || "";
+        row.outerHTML = renderEditableReferenceRow({ label, url });
+        bindReferenceButtons(root);
       };
     });
   }
   function parseReferenceRows(root) {
     return $all(".reference-row", root).map((row) => {
+      if (row.matches("[data-reference-saved]")) {
+        const label = row.dataset.referenceTitle || "Additional source";
+        const url = row.dataset.referenceUrl || "";
+        return url ? { label, url } : null;
+      }
       const label = row.querySelector('[name="referenceTitle"]')?.value.trim() || "Additional source";
       const url = row.querySelector('[name="referenceUrl"]')?.value.trim() || "";
       return url ? { label, url } : null;

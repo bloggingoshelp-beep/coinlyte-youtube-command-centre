@@ -103,7 +103,7 @@ Planner cards can be created manually or from intelligence. When a card comes fr
 - Stage.
 - Optional assignee.
 - Optional sponsor linkage.
-- Optional editor reference sources.
+- Optional editor reference sources. After a row-level Save, these should display as locked source rows with a Source link and a single Edit action, so editors can tell the reference was accepted.
 
 Current stages:
 
