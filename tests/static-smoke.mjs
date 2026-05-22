@@ -19,6 +19,7 @@ const files = {
   qaReport: await readFile(new URL("qa-reports/coinlyte-command-centre-qa-report-2026-05-22.html", root), "utf8"),
   deployedQaReport: await readFile(new URL("assets/reports/coinlyte-command-centre-qa-report-2026-05-22.html", root), "utf8"),
   workflow: await readFile(new URL(".github/workflows/refresh.yml", root), "utf8"),
+  deployWorkflow: await readFile(new URL(".github/workflows/deploy.yml", root), "utf8"),
   refreshScript: await readFile(new URL(".github/scripts/refresh.py", root), "utf8"),
   liveData: await readFile(new URL("assets/live-data.js", root), "utf8"),
   vercel: await readFile(new URL("vercel.json", root), "utf8")
@@ -132,6 +133,9 @@ if (!files.refreshScript.includes("assets/live-data.js")) {
 }
 if (!files.workflow.includes("VERCEL_DEPLOY_HOOK")) {
   throw new Error("Refresh workflow should support the Vercel deploy hook.");
+}
+if (!files.deployWorkflow.includes("VERCEL_DEPLOY_HOOK") || files.deployWorkflow.includes("refresh.py")) {
+  throw new Error("Deploy workflow must trigger Vercel without running the refresh script.");
 }
 if (!files.liveData.includes("window.COINLYTE_LIVE_DATA")) {
   throw new Error("Live data asset must expose COINLYTE_LIVE_DATA.");

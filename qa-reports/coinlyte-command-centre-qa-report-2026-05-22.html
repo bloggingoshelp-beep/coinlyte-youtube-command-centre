@@ -350,6 +350,7 @@
             <li>The Vercel API asks GitHub Actions to run the refresh workflow.</li>
             <li>The workflow reads YouTube, comments, analytics, competitor feeds, news RSS, and Anthropic/Claude generation where configured.</li>
             <li>The workflow writes <code>assets/live-data.js</code> and <code>assets/refresh-status.json</code>, commits them, and optionally triggers Vercel redeploy through the deploy hook.</li>
+            <li>The deploy-only workflow <code>.github/workflows/deploy.yml</code> can redeploy the current code without running the heavy data refresh.</li>
           </ul>
         </div>
       </div>
@@ -448,6 +449,7 @@
         <li><code>api/static.js</code> - changed static file protection from signed-cookie-only to live session validation.</li>
         <li><code>tests/static-smoke.mjs</code> - updated the regression test so future agents keep the stronger static gate.</li>
         <li><code>vercel.json</code> - added <code>qa-reports/**</code> to the static function bundle so reports can be served after deployment.</li>
+        <li><code>.github/workflows/deploy.yml</code> - deploy-only workflow for triggering Vercel without refreshing YouTube/news/AI data.</li>
         <li><code>qa-reports/coinlyte-command-centre-qa-report-2026-05-22.html</code> - this review artifact.</li>
         <li><code>assets/reports/coinlyte-command-centre-qa-report-2026-05-22.html</code> - deployed copy served by the existing authenticated static asset bundle.</li>
       </ul>
