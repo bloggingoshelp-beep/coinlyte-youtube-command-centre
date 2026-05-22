@@ -52,6 +52,12 @@
       localStorage.setItem(key, JSON.stringify(value));
     }
   };
+  function isLocalPreview() {
+    return ["localhost", "127.0.0.1", ""].includes(window.location.hostname);
+  }
+  function localOwnerSession() {
+    return { role: "owner", name: "Local Owner", userId: "local", access: APP_ACCESS };
+  }
 
   let state = {
     view: "overview",
@@ -74,7 +80,7 @@
     dismissedCommand: store.get("cl_dismissed_command_v1", []),
     teamMembers: normalizeTeamMembers(store.get("cl_team_members_v1", DEFAULT_TEAM)),
     notifications: store.get("cl_notifications_v1", []),
-    session: { role: "owner", name: "Local Owner", userId: "local", access: APP_ACCESS },
+    session: isLocalPreview() ? localOwnerSession() : null,
     cloud: { ready: false, loading: false, mode: "local", dirty: false, lastSyncedAt: "" }
   };
   let cloudSaveTimer = null;
@@ -836,19 +842,44 @@
     if (!area) return true;
     return state.session?.role === "owner" || (state.session?.access || []).includes(area);
   }
+  function areaForView(view) {
+    if (["ideas", "pulse", "market"].includes(view)) return "Channel Intelligence";
+    if (view === "calendar") return "Content Planner";
+    if (view === "review") return "Analytics";
+    return VIEW_ACCESS[view];
+  }
   function firstAllowedView() {
     const found = Object.entries(VIEW_ACCESS).find(([, area]) => hasAppAccess(area));
     return found?.[0] || "overview";
+  }
+  function clearRestrictedViews() {
+    $all(".view").forEach((section) => {
+      const allowed = hasAppAccess(areaForView(section.id));
+      section.classList.toggle("is-hidden", !allowed && !section.classList.contains("active"));
+      if (!allowed) section.innerHTML = "";
+    });
+  }
+  function scrubUnauthorizedActions() {
+    $all("[data-command-jump]").forEach((btn) => {
+      const target = btn.dataset.commandJump;
+      const allowed = hasAppAccess(areaForView(target));
+      btn.classList.toggle("is-hidden", !allowed);
+      btn.disabled = !allowed;
+    });
   }
   function applyAccessNavigation() {
     $all(".nav-btn").forEach((btn) => {
       const area = VIEW_ACCESS[btn.dataset.view];
       btn.classList.toggle("is-hidden", !hasAppAccess(area));
+      btn.disabled = !hasAppAccess(area);
     });
     $("#refresh-now")?.classList.toggle("is-hidden", !hasAppAccess("Refresh"));
+    if ($("#refresh-now")) $("#refresh-now").disabled = !hasAppAccess("Refresh");
     $("#sync-board")?.classList.toggle("is-hidden", !state.session);
     $("#owner-menu")?.classList.toggle("is-team-profile", state.session?.role !== "owner");
     $("#owner-menu")?.setAttribute("title", state.session?.role === "owner" ? "Owner settings" : "Logout");
+    clearRestrictedViews();
+    scrubUnauthorizedActions();
   }
   async function bootstrapCloud() {
     await pullSharedBoard("board", { label: "Checking shared board...", success: "Shared board synced", fail: "Local board", renderAfter: true, quiet: false });
@@ -3474,6 +3505,13 @@
   }
 
   function render() {
+    if (!hasAppAccess(areaForView(state.view))) {
+      state.view = firstAllowedView();
+      $all(".nav-btn").forEach((btn) => btn.classList.toggle("active", btn.dataset.view === state.view));
+      $all(".view").forEach((section) => section.classList.toggle("active", section.id === state.view));
+      $("#view-title").textContent = titleFor(state.view);
+    }
+    clearRestrictedViews();
     $("#side-refresh").textContent = new Date(data.refreshedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
     $("#side-refresh-mode").textContent = state.refreshJob?.status || "Latest cached build";
     const dashboardEyebrow = $("#dashboard-eyebrow");
@@ -3491,6 +3529,8 @@
     if (state.view === "brand") renderBrand();
     if (state.view === "review") renderReview();
     if (state.view === "refresh") renderRefresh();
+    clearRestrictedViews();
+    applyAccessNavigation();
   }
   function initLogin() {
     const authed = sessionStorage.getItem("cl_local_session") === "1";
