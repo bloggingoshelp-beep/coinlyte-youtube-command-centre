@@ -436,6 +436,11 @@ Users can:
 - Dismiss.
 - Dismiss all visible notifications in one action. This only dismisses notifications visible to the current login, not hidden notifications for another user.
 
+Server-side protection:
+
+- `/api/board` filters notifications for the current login before returning board state. Team users only receive notifications addressed to them; owners only receive owner-scoped alerts and legacy owner notes.
+- `/api/board` preserves hidden notifications when any user syncs the board. This prevents an owner save from deleting a team member's assignment alert and prevents a team save from deleting owner progress alerts.
+
 ### Email Notifications
 
 Email notification flow:
@@ -445,6 +450,11 @@ Email notification flow:
 3. Member has an email address.
 4. Frontend creates a member-scoped notification and calls `/api/notify`.
 5. Vercel sends email through Resend.
+
+Email safety:
+
+- `/api/notify` requires a valid app session.
+- When Supabase is configured, `/api/notify` only accepts recipients that belong to active team-user email rows. This blocks a logged-in user from manually posting arbitrary email addresses to the notification endpoint.
 
 Owner progress notification flow:
 

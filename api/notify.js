@@ -1,4 +1,9 @@
 import { requireSession } from "./auth.js";
+import { isDbConfigured, listTeamUsers } from "./db.js";
+
+function normalizeEmail(value = "") {
+  return String(value).trim().toLowerCase();
+}
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -10,6 +15,16 @@ export default async function handler(req, res) {
   const { to, subject, message, cardTitle } = req.body || {};
   if (!to || !subject || !message) {
     return res.status(400).json({ error: "Missing email notification fields", status: "failed" });
+  }
+
+  if (isDbConfigured()) {
+    const allowedRecipients = new Set((await listTeamUsers())
+      .filter((member) => member.access_status !== "Paused")
+      .map((member) => normalizeEmail(member.email))
+      .filter(Boolean));
+    if (!allowedRecipients.has(normalizeEmail(to))) {
+      return res.status(403).json({ error: "Email recipient is not an active team address", status: "blocked" });
+    }
   }
 
   const token = process.env.RESEND_API_KEY;

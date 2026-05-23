@@ -18,16 +18,44 @@ function allowedFields(session) {
   return [...new Set(["notifications", ...APP_ACCESS.flatMap((area) => hasAccess(session, area) ? ACCESS_FIELDS[area] || [] : [])])];
 }
 
+function canSeeNotification(note = {}, session = {}) {
+  if (session.role === "owner") {
+    if (note.audience) return note.audience === "owner";
+    return !note.memberId || note.memberId === "owner-kirtish" || note.memberName === "Kirtish" || note.memberName === "Owner";
+  }
+  const memberId = session.memberId || "";
+  const name = session.name || "";
+  if (note.audience === "owner") return false;
+  if (note.audience === "member") return note.memberId === memberId || note.memberName === name;
+  return !note.memberId || note.memberId === memberId || note.memberName === name;
+}
+
 function filterBoard(data = {}, session) {
   const allowed = allowedFields(session);
-  return Object.fromEntries(allowed.map((field) => [field, data[field]]).filter(([, value]) => value !== undefined));
+  return Object.fromEntries(allowed.map((field) => {
+    const value = field === "notifications" && Array.isArray(data[field])
+      ? data[field].filter((note) => canSeeNotification(note, session))
+      : data[field];
+    return [field, value];
+  }).filter(([, value]) => value !== undefined));
 }
 
 function mergeBoard(current = {}, incoming = {}, session) {
   const allowed = allowedFields(session);
   const next = { ...current };
   allowed.forEach((field) => {
-    if (incoming[field] !== undefined) next[field] = incoming[field];
+    if (incoming[field] === undefined) return;
+    if (field === "notifications") {
+      const currentNotes = Array.isArray(current.notifications) ? current.notifications : [];
+      const incomingNotes = Array.isArray(incoming.notifications) ? incoming.notifications : [];
+      const incomingIds = new Set(incomingNotes.map((note) => note?.id).filter(Boolean));
+      const hiddenNotes = currentNotes.filter((note) => !canSeeNotification(note, session) && !incomingIds.has(note?.id));
+      next.notifications = [...incomingNotes, ...hiddenNotes]
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+        .slice(0, 80);
+      return;
+    }
+    next[field] = incoming[field];
   });
   return next;
 }

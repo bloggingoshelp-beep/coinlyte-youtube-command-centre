@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CoinLyte Command Centre Launch QA - 23 May 2026</title>
+  <style>
+    :root {
+      --ink: #17233f; --muted: #5d6d88; --paper: #f7f4ef; --card: #ffffff; --line: #ded7ce;
+      --green: #0b9f6a; --amber: #c78316; --red: #c83f38; --violet: #6d5df5; --blue: #1d7eea;
+      --shadow: 0 16px 36px rgba(22, 35, 61, 0.11);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--paper); color: var(--ink); line-height: 1.55; }
+    .hero { background: linear-gradient(120deg, #19124a 0%, #172344 52%, #06382f 100%); color: #fff; padding: 44px 28px; border-bottom: 4px solid #d49a29; }
+    .wrap { width: min(1180px, calc(100% - 36px)); margin: 0 auto; }
+    h1, h2, h3 { margin: 0; line-height: 1.15; } h1 { font-size: clamp(34px, 5vw, 58px); max-width: 980px; } h2 { font-size: 25px; margin-bottom: 10px; } h3 { font-size: 18px; margin-bottom: 8px; }
+    p { margin: 0 0 12px; }
+    .eyebrow { margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.16em; font-size: 12px; font-weight: 850; color: #d49a29; }
+    .hero p { color: rgba(255,255,255,0.78); max-width: 920px; font-size: 18px; margin-top: 16px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+    .chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); color: #fff; font-weight: 750; font-size: 14px; }
+    main { padding: 28px 0 52px; }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); padding: 22px; }
+    .span-12 { grid-column: span 12; } .span-8 { grid-column: span 8; } .span-6 { grid-column: span 6; } .span-4 { grid-column: span 4; }
+    .status { display: inline-flex; align-items: center; gap: 8px; padding: 7px 11px; border-radius: 999px; font-weight: 850; font-size: 13px; margin: 4px 6px 4px 0; }
+    .pass { background: #d9f8ea; color: #057047; } .watch { background: #fff1cf; color: #8a5a05; } .fix { background: #fde3e0; color: #a8322d; } .info { background: #e9edff; color: #3f35a8; }
+    ul { margin: 10px 0 0; padding-left: 20px; } li { margin: 6px 0; }
+    code { background: #f1eee8; border: 1px solid #ded7ce; padding: 2px 6px; border-radius: 6px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; } th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 11px 10px; vertical-align: top; }
+    th { color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; }
+    .bar { border-top: 4px solid var(--green); } .bar.violet { border-top-color: var(--violet); } .bar.amber { border-top-color: var(--amber); } .bar.blue { border-top-color: var(--blue); } .bar.red { border-top-color: var(--red); }
+    @media (max-width: 860px) { .span-8, .span-6, .span-4 { grid-column: span 12; } .hero { padding: 34px 20px; } }
+  </style>
+</head>
+<body>
+  <header class="hero"><div class="wrap"><p class="eyebrow">CoinLyte Command Centre</p><h1>Launch QA Report - Production Readiness</h1><p>Functional, backend, access-control, and launch-safety review completed on 23 May 2026 for the YouTube business command centre.</p><div class="chips"><span class="chip">Verdict: Launch-ready after latest patch</span><span class="chip">Frontend: passed</span><span class="chip">Backend: passed</span><span class="chip">Security: tightened</span></div></div></header>
+  <main class="wrap"><section class="grid">
+    <article class="card span-12 bar"><h2>Executive Verdict</h2><p>The application is suitable for production use after the notification privacy patch included with this QA pass. The app loads correctly, protects private dashboard assets behind login, separates shared board sync from full intelligence refresh, and preserves the core operating workflows: Command, Channel Intelligence, Content Planner, Brand Deals, Team Access, Notifications, and Refresh.</p><span class="status pass">Passed: local static checks</span><span class="status pass">Passed: browser smoke tests</span><span class="status pass">Passed: protected API boundary checks</span><span class="status watch">Monitor: email delivery logs after real team assignment</span></article>
+    <article class="card span-4 bar violet"><h3>Build Checks</h3><ul><li><code>npm test</code> passed.</li><li><code>node --check assets/app.js</code> passed.</li><li><code>node --check api/board.js</code> passed.</li><li><code>node --check api/notify.js</code> passed.</li></ul></article>
+    <article class="card span-4 bar blue"><h3>Browser Checks</h3><ul><li>Local app loaded with no console errors.</li><li>Production app loaded with no console errors.</li><li>Command, Planner, Notification bell, and News Radar rendered.</li><li>Team-limited production session only showed allowed top-level apps.</li></ul></article>
+    <article class="card span-4 bar amber"><h3>Security Boundary</h3><ul><li>Unauthenticated <code>/api/board</code> returns 401.</li><li>Unauthenticated <code>/api/notify</code> POST returns 401.</li><li>Protected static asset requests redirect to login when unauthenticated.</li><li>No real secret values were found in frontend assets.</li></ul></article>
+    <article class="card span-12"><h2>What Was Tested</h2><table><thead><tr><th>Area</th><th>Coverage</th><th>Result</th></tr></thead><tbody><tr><td>Login protection</td><td>API/session guard, protected static assets, production team session behavior.</td><td><span class="status pass">Pass</span></td></tr><tr><td>Command Centre</td><td>Daily decision card, owner action queue, dismiss controls, latest upload context, command shortcuts.</td><td><span class="status pass">Pass</span></td></tr><tr><td>Content Planner</td><td>Board default, planner sub-tabs, backup/import controls, edit modal structure, date-time deadline field, source-link workflow.</td><td><span class="status pass">Pass</span></td></tr><tr><td>Editor reference sources</td><td>Saved source rows render as locked rows with Source link and Edit action; row-level Save converts from editable input to accepted source row.</td><td><span class="status pass">Pass</span></td></tr><tr><td>News Radar</td><td>Source-only radar tab renders top news cards with source links, save radar, and dismiss actions. It does not create video ideas directly.</td><td><span class="status pass">Pass</span></td></tr><tr><td>Notifications</td><td>Bell opens notification inbox, shows mark-read and dismiss-all controls, scopes visible notes to the current login.</td><td><span class="status pass">Pass</span></td></tr><tr><td>Brand Deals</td><td>Brand board and brand backup/import are present in the app surface and covered by static app checks.</td><td><span class="status pass">Pass</span></td></tr><tr><td>Refresh Control</td><td>Refresh API stays owner-gated; screen distinguishes board sync from full live-data refresh.</td><td><span class="status pass">Pass</span></td></tr></tbody></table></article>
+    <article class="card span-12 bar red"><h2>Issue Found and Fixed</h2><p><strong>Notification privacy and preservation hardening.</strong> The board API already filtered operational data by app access, but notification sync needed a stronger server-side rule. Without the patch, a filtered board save could risk replacing notifications that were hidden from the current login.</p><ul><li>Fixed <code>api/board.js</code> so notifications are filtered server-side for the current session.</li><li>Fixed <code>api/board.js</code> so hidden notifications are preserved during sync for both owner and team sessions.</li><li>Fixed <code>api/notify.js</code> so email sends are restricted to active Supabase team-user email addresses when Supabase is configured.</li><li>Updated automated smoke checks to protect these rules in future edits.</li></ul></article>
+    <article class="card span-6"><h2>Backend Launch Notes</h2><ul><li><code>/api/static</code> keeps dashboard files behind login.</li><li><code>/api/me</code> revalidates sessions and team access against Supabase.</li><li><code>/api/board</code> stores shared operating board state in Supabase <code>app_state</code>.</li><li><code>/api/team-user</code> manages hashed team login codes.</li><li><code>/api/notify</code> sends optional Resend emails only to active team addresses.</li><li><code>/api/refresh</code> queues the GitHub live-data refresh workflow for owners only.</li></ul></article>
+    <article class="card span-6"><h2>Residual Risks</h2><ul><li>Email should be verified in Resend logs after the next real team assignment, because delivery depends on Resend domain health and recipient mailbox filtering.</li><li>Production testing used the currently logged-in production session for UI checks. Owner-only destructive flows such as importing backups should still be handled deliberately.</li><li>News/feed quality depends on GitHub Actions refresh health and upstream YouTube/RSS availability.</li></ul></article>
+    <article class="card span-12 bar"><h2>Launch Checklist</h2><ul><li>Keep Vercel env vars configured: owner login, Supabase URL/service key, GitHub PAT, YouTube credentials, Anthropic key, Resend key, and notify-from sender.</li><li>Keep Supabase tables from <code>supabase/schema.sql</code> present.</li><li>Before any future Claude/Gemini/Codex change: run <code>npm test</code> and browser-test the planner, notifications, team login, and refresh screen.</li><li>Use Planner and Brand backup buttons before large UI/code changes.</li><li>Use GitHub revert if a future deployment breaks production behavior.</li></ul></article>
+  </section></main>
+</body>
+</html>

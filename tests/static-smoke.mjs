@@ -98,6 +98,9 @@ if (!files.login.includes("OWNER_USER_IDS") || !files.login.includes("mrvyas")) 
 if (!files.db.includes("app_state") || !files.board.includes("requireSession") || !files.board.includes("saveAppState")) {
   throw new Error("Board API must read/write shared Supabase app_state behind login.");
 }
+if (!files.board.includes("canSeeNotification") || !files.board.includes("hiddenNotes")) {
+  throw new Error("Board API must filter and preserve role-scoped notifications server-side.");
+}
 if (!files.teamUser.includes("hashAccessCode") || !files.teamUser.includes("requireOwner") || !files.teamUser.includes("listTeamUsers")) {
   throw new Error("Team user API must hash codes, require owner access, and list login-ready users.");
 }
@@ -118,6 +121,9 @@ if (!files.app.includes('plannerMode: "board"')) {
 }
 if (!files.notify.includes("requireSession") || files.notify.includes("requireOwner")) {
   throw new Error("Email notifications must allow any logged-in app user, not owner-only.");
+}
+if (!files.notify.includes("allowedRecipients") || !files.notify.includes("Email recipient is not an active team address")) {
+  throw new Error("Email notification endpoint must block arbitrary recipient addresses.");
 }
 if (!files.vercel?.includes('/api/notify')) {
   throw new Error("Vercel must route /api/notify to the email notification function.");
