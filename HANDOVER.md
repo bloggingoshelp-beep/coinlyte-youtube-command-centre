@@ -81,7 +81,7 @@ Channel Intelligence is the source of market and audience insight. It includes:
 Important behavior:
 
 - Market Intelligence can create planner-ready ideas.
-- News Radar is source-only. It is for scanning important crypto news, opening source links, dismissing noise, and saving links to Content Planner -> Saved Radar. Do not turn News Radar into another video-idea generator unless Kirtish explicitly asks.
+- News Radar is source-first. It is for scanning important crypto news, opening source links, dismissing noise, saving links to Content Planner -> Saved Radar, or sending a source directly into Planner when Kirtish wants to act immediately. Do not turn News Radar into another video-idea generator unless Kirtish explicitly asks.
 - Competitor Intelligence should show competitor uploads and CoinLyte-fit ideas inspired by them.
 - Community Pulse should show comment-led video ideas before raw top comments.
 - Dismissed intelligence cards must stay hidden until restored or local/cloud state is cleared.
@@ -125,11 +125,13 @@ Editor reference sources are separate from the locked research brief. When a use
 
 ### Saved Radar
 
-Saved Radar stores source-only news links that should survive the next refresh. It is fed from Channel Intelligence -> News Radar.
+Saved Radar stores source-first news links that should survive the next refresh. It is fed from Channel Intelligence -> News Radar.
 
 Important behavior:
 
-- Saving radar does not create a planner card.
+- Save Radar keeps the source for later reading without creating a planner card.
+- Add Planner converts the saved source into a planner card with the original source link, source age, category, and research brief.
+- Dismiss removes the saved source from Saved Radar with undo support. Use Dismiss wording here, not Remove.
 - Saved Radar persists in localStorage, backup JSON, and Supabase board sync.
 - Saved Radar is useful for weekly live videos, team research handoff, and audience sharing.
 
@@ -625,7 +627,7 @@ Then browser-test:
 - Team login.
 - Command screen.
 - Channel Intelligence tabs.
-- News Radar save/dismiss/source links.
+- News Radar save/add planner/dismiss/source links.
 - Add idea to Planner.
 - Planner edit modal.
 - Saved Radar tab.
@@ -646,7 +648,7 @@ Then browser-test:
 - Do not turn Sync Board into a full YouTube/news/Claude refresh.
 - Source links must open in a new tab.
 - Planner cards created from intelligence must keep source link and research brief.
-- News Radar must remain source-only unless explicitly redesigned.
+- News Radar must remain source-first and scannable. It can save for future review or add directly to Planner, but it should not become another heavy idea board unless explicitly redesigned.
 - Team access changes must be checked server-side, not only hidden in the UI.
 - Team access codes must remain hashed.
 - Keep backup/import flows working before large UI changes.

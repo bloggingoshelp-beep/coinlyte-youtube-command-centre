@@ -69,7 +69,7 @@ For the detailed functional checklist, use `TESTING.md`.
 - Supabase `app_state`: shared planner cards, brand records, team users, notifications, dismissed ideas, and dismissed command items.
 - Supabase `team_users`: hashed team access codes and board permissions.
 - Browser local storage: fallback/offline copy when Supabase is not configured or unavailable.
-- Saved Radar: source-only news links saved from Channel Intelligence for later use in Content Planner.
+- Saved Radar: source-first news links saved from Channel Intelligence for later reading, dismissal, or direct Planner conversion.
 
 ## Important Editing Rules
 

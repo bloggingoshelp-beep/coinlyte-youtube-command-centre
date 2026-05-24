@@ -375,6 +375,7 @@
   function normalizeSavedRadar(items) {
     const seen = new Set();
     return (items || []).map((item) => withId({
+      id: item.id,
       title: item.title || "Saved news source",
       bucket: item.bucket || item.source || "News Radar",
       category: item.category || "Market",
@@ -1629,6 +1630,7 @@
       <div class="market-card-actions">
         ${idea.sourceUrl ? `<a class="mini-link" href="${escapeHTML(idea.sourceUrl)}" target="_blank" rel="noreferrer">📰 Open Source ↗</a>` : `<span class="mini-link muted-link">📰 Source pending</span>`}
         <button class="primary-btn compact-btn" data-save-radar="${index}" type="button" ${saved ? "disabled" : ""}>${saved ? "Saved" : "Save Radar"}</button>
+        <button class="primary-btn compact-btn alt-btn" data-add-radar-planner="${index}" type="button">+ Planner</button>
         <button class="ghost-btn compact-btn dismiss-btn" data-dismiss-market="${index}" type="button">Dismiss</button>
       </div>
     </article>`;
@@ -1668,6 +1670,17 @@
       setView("planner");
     } });
     render();
+  }
+  function radarIdeaFromSaved(item) {
+    return {
+      title: item.title,
+      category: item.category || item.bucket || "Market",
+      urgency: item.bucket === "India Policy" ? "Urgent" : "High",
+      source: item.bucket || "Saved Radar",
+      sourceUrl: item.sourceUrl || "",
+      reason: [item.angle || "", item.liveUse ? `Live/weekly use: ${item.liveUse}` : ""].filter(Boolean).join("\n\n"),
+      sourceAge: item.age || ""
+    };
   }
   function intelligenceCompetitorContent() {
     const tones = ["red", "teal", "violet"];
@@ -1799,6 +1812,10 @@
     $all("[data-save-radar]").forEach((btn) => btn.addEventListener("click", () => {
       const radarItem = radar.find((item) => item.index === Number(btn.dataset.saveRadar));
       if (radarItem) animateAction(btn, "add", () => saveRadarSignal(radarItem.signal, radarItem.score));
+    }));
+    $all("[data-add-radar-planner]").forEach((btn) => btn.addEventListener("click", () => {
+      const radarItem = radar.find((item) => item.index === Number(btn.dataset.addRadarPlanner));
+      if (radarItem) animateAction(btn, "add", () => addIdeaToPipeline(radarItem.signal.idea));
     }));
     $all("[data-dismiss-market]").forEach((btn) => btn.addEventListener("click", () => {
       const signal = signals[Number(btn.dataset.dismissMarket)];
@@ -2145,7 +2162,7 @@
   function addIdeaToPipeline(idea) {
     if (state.pipeline.some((card) => card.title.toLowerCase() === idea.title.toLowerCase())) {
       toast("That idea is already in the planner.");
-      return;
+      return false;
     }
     const primaryUrl = idea.sourceUrl || idea.url || "";
     const sourceLinks = [
@@ -2186,6 +2203,7 @@
       state.plannerTab = "board";
       setView("planner");
     } });
+    return true;
   }
 
   function renderPlanner() {
@@ -2373,7 +2391,8 @@
       ${item.liveUse ? `<div class="live-use-box">🎙️ ${escapeHTML(item.liveUse)}</div>` : ""}
       <div class="market-card-actions">
         ${item.sourceUrl ? `<a class="mini-link" href="${escapeHTML(item.sourceUrl)}" target="_blank" rel="noreferrer">📰 Open Source ↗</a>` : `<span class="mini-link muted-link">📰 Source pending</span>`}
-        <button class="ghost-btn compact-btn dismiss-btn" data-remove-saved-radar="${item.id}" type="button">Remove</button>
+        <button class="primary-btn compact-btn alt-btn" data-add-saved-radar="${item.id}" type="button">+ Planner</button>
+        <button class="ghost-btn compact-btn dismiss-btn" data-dismiss-saved-radar="${item.id}" type="button">Dismiss</button>
       </div>
     </article>`;
   }
@@ -2398,14 +2417,27 @@
         }
       });
     });
-    $all("[data-remove-saved-radar]").forEach((btn) => btn.addEventListener("click", () => {
-      const item = state.savedRadar.find((saved) => saved.id === btn.dataset.removeSavedRadar);
+    $all("[data-add-saved-radar]").forEach((btn) => btn.addEventListener("click", () => {
+      const item = state.savedRadar.find((saved) => saved.id === btn.dataset.addSavedRadar);
+      if (!item) return;
+      animateAction(btn, "add", () => {
+        const previous = state.savedRadar;
+        const added = addIdeaToPipeline(radarIdeaFromSaved(item));
+        if (!added) return;
+        state.savedRadar = state.savedRadar.filter((saved) => saved.id !== item.id);
+        saveSavedRadar();
+        renderPlanner();
+        toast("Saved radar moved to planner.", { label: "Undo", run: () => { state.savedRadar = previous; saveSavedRadar(); renderPlanner(); } });
+      });
+    }));
+    $all("[data-dismiss-saved-radar]").forEach((btn) => btn.addEventListener("click", () => {
+      const item = state.savedRadar.find((saved) => saved.id === btn.dataset.dismissSavedRadar);
       if (!item) return;
       animateAction(btn, "dismiss", () => {
         state.savedRadar = state.savedRadar.filter((saved) => saved.id !== item.id);
         saveSavedRadar();
         renderPlanner();
-        toast("Saved radar removed.", { label: "Undo", run: () => { state.savedRadar.unshift(item); saveSavedRadar(); renderPlanner(); } });
+        toast("Saved radar dismissed.", { label: "Undo", run: () => { state.savedRadar.unshift(item); saveSavedRadar(); renderPlanner(); } });
       });
     }));
   }

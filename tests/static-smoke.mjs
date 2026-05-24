@@ -116,6 +116,15 @@ if (!files.app.includes("Unknown owner") || !files.app.includes("👤 Unassigned
 if (!files.app.includes("pickCommandCard") || !files.app.includes("Skip Today") || !files.app.includes("commandDecisionBasis")) {
   throw new Error("Command owner decision must be ranked, explainable, and dismissible.");
 }
+if (!files.app.includes("data-add-radar-planner") || !files.app.includes("data-add-saved-radar") || !files.app.includes("data-dismiss-saved-radar")) {
+  throw new Error("News Radar and Saved Radar must support direct planner conversion and saved radar dismissal.");
+}
+if (files.app.includes("data-remove-saved-radar")) {
+  throw new Error("Saved Radar should use Dismiss wording/actions instead of Remove.");
+}
+if (!files.app.includes("id: item.id")) {
+  throw new Error("Saved Radar normalization must preserve stable item IDs for actions.");
+}
 if (!files.app.includes("persistBoardNow({ force: true });")) {
   throw new Error("Stage moves must immediately persist to the shared board.");
 }
