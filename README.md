@@ -15,6 +15,8 @@ For future Codex, Claude, Gemini, or human maintainers: read `HANDOVER.md` first
 - Provides owner reliability controls: planner backup/import, brand backup/import, owner settings, and logout.
 - Separates lightweight board sync from the full live-data refresh: Sync Board pulls shared Planner, Brand Deals, Team Access, notifications, and dismissals without rebuilding YouTube/news/comment intelligence.
 - Runs a refresh workflow through Vercel API + GitHub Actions.
+- Refresh status separates the latest GitHub workflow attempt from the last successful data cache, so a failed run does not hide the last good YouTube/news/comment intelligence.
+- Command Centre owner decision is ranked from active planner cards by production stage, urgency, deadline, and assignment state, and can be skipped without deleting the card.
 
 ## Main App Areas
 

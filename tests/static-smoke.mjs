@@ -77,6 +77,9 @@ if (!files.refresh.includes("process.env.GH_PAT")) {
 if (!files.status.includes("workflow_runs")) {
   throw new Error("Refresh status endpoint must inspect workflow runs.");
 }
+if (!files.status.includes("readLastSuccessfulCache") || !files.status.includes('"cached"')) {
+  throw new Error("Refresh status endpoint must preserve and report the last good cache when a workflow fails.");
+}
 if (!files.login.includes("process.env.OWNER_ACCESS_CODE")) {
   throw new Error("Login endpoint must read OWNER_ACCESS_CODE server-side.");
 }
@@ -109,6 +112,9 @@ if (!files.teamUser.includes("DELETE") || !files.db.includes("deleteTeamUser") |
 }
 if (!files.app.includes("Unknown owner") || !files.app.includes("👤 Unassigned")) {
   throw new Error("Planner cards must visibly show assigned/unassigned ownership.");
+}
+if (!files.app.includes("pickCommandCard") || !files.app.includes("Skip Today") || !files.app.includes("commandDecisionBasis")) {
+  throw new Error("Command owner decision must be ranked, explainable, and dismissible.");
 }
 if (!files.app.includes("persistBoardNow({ force: true });")) {
   throw new Error("Stage moves must immediately persist to the shared board.");

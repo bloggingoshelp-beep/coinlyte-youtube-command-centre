@@ -1048,7 +1048,7 @@
     const an = data.analytics["90d"];
     const visibleIdeaCount = visibleIdeas().length;
     const activePipeline = state.pipeline.filter((card) => card.stage !== "published");
-    const nextCard = activePipeline.find((card) => ["recording", "editing", "scheduled"].includes(card.stage)) || activePipeline[0] || state.pipeline[0];
+    const nextCard = pickCommandCard(activePipeline);
     const activeBrands = state.brands.filter((brand) => !["Paid", "Declined"].includes(brand.status));
     const topIdea = visibleIdeas()[0] || data.ideas[0];
     const commentIdea = commentPickedIdea();
@@ -1060,6 +1060,7 @@
     const overdue = activePipeline.filter((card) => isOverdue(card));
     const unreadNotifications = state.notifications.filter((note) => !note.read).length;
     const targetStatus = commandTargetStatus(nextCard);
+    const decisionKey = nextCard ? commandDecisionKey(nextCard) : "daily-decision:none";
     const ownerName = nextCard?.assignedTo ? teamMemberName(nextCard.assignedTo) : "";
     const sponsorWatch = activeBrands[0];
     const commandLabel = state.session?.role === "owner" ? "daily owner dashboard" : "team command workspace";
@@ -1096,6 +1097,7 @@
           <p class="eyebrow">Today's owner decision</p>
           <h3>${escapeHTML(nextCard?.title || topIdea?.title || "Pick today's strongest video idea")}</h3>
           <p>${escapeHTML(commandDecisionLine(nextCard, topIdea))}</p>
+          <p class="decision-basis">${escapeHTML(commandDecisionBasis(nextCard, topIdea))}</p>
           <div class="daily-status-row">
             ${commandChip(stageEmoji(nextCard?.stage) + " " + stageLabel(nextCard?.stage || "ideas"), "blue")}
             ${commandChip(ownerName ? `👤 ${ownerName}` : "👤 Unassigned", ownerName ? "green" : "red")}
@@ -1106,6 +1108,7 @@
             <button class="primary-btn" data-command-jump="planner" type="button">Open Planner</button>
             <button class="ghost-btn" data-command-jump="market" type="button">Check Market</button>
             <button class="ghost-btn" data-command-jump="team" type="button">Assign Team</button>
+            <button class="ghost-btn" data-command-dismiss="${decisionKey}" type="button">${nextCard ? "Skip Today" : "Dismiss"}</button>
           </div>
         </section>
         <aside class="daily-alert-stack">
@@ -1178,6 +1181,45 @@
     const stage = stageLabel(card.stage).toLowerCase();
     const owner = card.assignedTo ? teamMemberName(card.assignedTo) : "no owner yet";
     return `${stage} card with ${owner}. Next: ${nextStageNudge(card).toLowerCase()}`;
+  }
+  function commandDecisionKey(card) {
+    return `daily-decision:${card?.id || "none"}`;
+  }
+  function pickCommandCard(cards) {
+    return cards
+      .filter((card) => !isCommandDismissed(commandDecisionKey(card)))
+      .map((card, index) => ({ card, index, score: commandCardScore(card, index) }))
+      .sort((a, b) => b.score - a.score || a.index - b.index)[0]?.card || null;
+  }
+  function commandCardScore(card, index = 0) {
+    let score = 0;
+    if (["recording", "editing", "scheduled"].includes(card.stage)) score += 100;
+    const priority = String(card.priority || "").toLowerCase();
+    if (priority.includes("urgent")) score += 45;
+    else if (priority.includes("high")) score += 25;
+    else if (priority.includes("medium")) score += 10;
+    const target = parseTargetDate(card.target);
+    if (target) {
+      const days = Math.round((startOfDay(target) - commandToday()) / 86400000);
+      if (days < 0) score += 55;
+      else score += Math.max(0, 30 - days * 4);
+    }
+    if (!card.assignedTo) score += 8;
+    return score - index / 100;
+  }
+  function commandDecisionBasis(card, idea) {
+    if (!card) {
+      return idea
+        ? "Basis: no active planner card is available, so the strongest visible video idea is shown."
+        : "Basis: no active planner card or visible idea is available right now.";
+    }
+    const pieces = [];
+    if (["recording", "editing", "scheduled"].includes(card.stage)) pieces.push(`${stageLabel(card.stage)} stage`);
+    if (String(card.priority || "").toLowerCase().includes("urgent")) pieces.push("urgent priority");
+    const status = commandTargetStatus(card);
+    if (status.label !== "No target") pieces.push(status.label.toLowerCase());
+    if (!card.assignedTo) pieces.push("unassigned");
+    return `Basis: ${pieces.length ? pieces.join(" · ") : "active planner card"}. Refresh does not move planner cards; Sync Board updates saved board changes.`;
   }
   function commandChip(label, tone = "blue") {
     return `<span class="command-chip ${tone}">${escapeHTML(label)}</span>`;
@@ -3461,12 +3503,16 @@
 
   function renderRefresh() {
     const job = state.refreshJob || { status: "idle", runId: "not queued", updatedAt: data.refreshedAt, datasets: {} };
+    const lastGoodAt = job.lastSuccessfulAt || data.refreshedAt;
+    const lastGoodLabel = job.lastSuccessfulRefresh || data.refreshBuild || "Latest cache";
+    const latestFailed = job.status === "failed";
+    const datasetTime = lastGoodAt || data.refreshedAt;
     const rows = [
-      ["Channel", job.datasets?.channel || "cached", data.refreshedAt],
-      ["Analytics", job.datasets?.analytics || "cached", data.refreshedAt],
-      ["Comments", job.datasets?.comments || "cached", data.refreshedAt],
-      ["Competitors", job.datasets?.competitors || "cached", data.refreshedAt],
-      ["Ideas", job.datasets?.ideas || "cached", data.refreshedAt]
+      ["Channel", job.datasets?.channel || "cached", datasetTime],
+      ["Analytics", job.datasets?.analytics || "cached", datasetTime],
+      ["Comments", job.datasets?.comments || "cached", datasetTime],
+      ["Competitors", job.datasets?.competitors || "cached", datasetTime],
+      ["Ideas", job.datasets?.ideas || "cached", datasetTime]
     ];
     $("#refresh").innerHTML = `
       <div class="panel">
@@ -3474,16 +3520,18 @@
           <div><h3>Refresh Control</h3><div class="panel-sub">The browser calls your own server endpoint. GitHub and YouTube secrets stay server-side.</div></div>
           <button class="primary-btn" data-trigger-refresh type="button">Queue Refresh</button>
         </div>
+        ${latestFailed ? `<div class="status-note danger"><strong>Latest workflow failed.</strong> The dashboard is still using the last successful data cache from ${escapeHTML(new Date(lastGoodAt).toLocaleString("en-GB"))}. Check the GitHub run, fix the failing step, then queue refresh again.</div>` : ""}
         <div class="grid cols-4">
-          ${metric("Workflow", escapeHTML(job.status || "idle"), `Run ${escapeHTML(job.runId || "not queued")}`)}
-          ${metric("Last Build", data.refreshBuild, "Git commit snapshot")}
-          ${metric("Data Date", new Date(data.refreshedAt).toLocaleDateString("en-GB"), "Cached build timestamp")}
+          ${metric("Latest Attempt", escapeHTML(job.status || "idle"), `${job.runUrl ? `<a href="${escapeHTML(job.runUrl)}" target="_blank" rel="noreferrer">Run ${escapeHTML(job.runId || "not queued")} ↗</a>` : `Run ${escapeHTML(job.runId || "not queued")}`}`)}
+          ${metric("Last Good Data", escapeHTML(lastGoodLabel), "Successful cache used by the app")}
+          ${metric("Data Timestamp", new Date(lastGoodAt).toLocaleDateString("en-GB"), "Last successful cache timestamp")}
           ${metric("Hourly", "Modeled", "API hourly rows not present yet")}
         </div>
       </div>
       <div class="panel">
         <div class="panel-head"><div><h3>Dataset Freshness</h3><div class="panel-sub">What changed, when it changed, and whether the refresh completed.</div></div><button class="ghost-btn" data-check-status type="button">Check Status</button></div>
-        <div class="refresh-timeline">${rows.map(([name, status, time]) => `<div class="timeline-item"><strong>${escapeHTML(name)}</strong><div><span class="tag ${status === "updated" ? "green" : "blue"}">${escapeHTML(status)}</span><div class="panel-sub">${escapeHTML(new Date(time).toLocaleString("en-GB"))}</div></div></div>`).join("")}</div>
+        ${job.note ? `<div class="status-note">${escapeHTML(job.note)}</div>` : ""}
+        <div class="refresh-timeline">${rows.map(([name, status, time]) => `<div class="timeline-item"><strong>${escapeHTML(name)}</strong><div><span class="tag ${status === "updated" ? "green" : status === "cached" ? "gold" : "blue"}">${escapeHTML(status)}</span><div class="panel-sub">${escapeHTML(new Date(time).toLocaleString("en-GB"))}</div></div></div>`).join("")}</div>
       </div>
       <div class="panel">
         <div class="panel-head"><div><h3>Production Safety</h3><div class="panel-sub">Expected deployment rules.</div></div></div>

@@ -327,6 +327,11 @@ a { color: inherit; }
   color: rgba(255,255,255,.78);
   line-height: 1.55;
 }
+.daily-priority-card .decision-basis {
+  margin-top: 10px;
+  color: rgba(255,255,255,.66);
+  font-size: .9rem;
+}
 .daily-status-row {
   display: flex;
   flex-wrap: wrap;
@@ -2090,6 +2095,20 @@ th { color: var(--muted); font-size: .74rem; text-transform: uppercase; }
 }
 
 .refresh-timeline { display: grid; gap: 10px; }
+.status-note {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(14,165,233,.22);
+  border-radius: var(--radius);
+  background: rgba(224,242,254,.72);
+  color: #075985;
+  font-weight: 750;
+}
+.status-note.danger {
+  border-color: rgba(239,68,68,.28);
+  background: rgba(254,226,226,.78);
+  color: #991b1b;
+}
 .timeline-item {
   display: grid;
   grid-template-columns: 110px 1fr;

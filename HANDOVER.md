@@ -56,6 +56,9 @@ Important behavior:
 
 - Quick action cards can be dismissed.
 - Owner action queue cards can be dismissed.
+- The large Today owner decision can be skipped/dismissed. This does not delete the planner card; it only hides that card from the Command decision slot until dismissed command items are restored.
+- Today owner decision is chosen from active planner cards, not directly from the refresh feed. The ranking prefers cards in Recording, Editing, or Scheduled, then urgent priority, then nearest or overdue target date, then unassigned cards.
+- Refresh Live Data does not move planner cards or change ownership. Use Sync Board for shared planner, brand, team, and notification state.
 - Latest upload thumbnail must stay aligned in a 16:9 frame.
 - Buttons should jump to the relevant area instead of opening disconnected pages.
 
@@ -172,6 +175,13 @@ Refresh Live Data does this:
 5. The workflow commits `assets/live-data.js` and `assets/refresh-status.json`.
 6. The workflow optionally calls the Vercel deploy hook.
 7. Vercel deploys the updated static data.
+
+The Refresh screen separates the latest workflow attempt from the last good data cache:
+
+- Latest Attempt shows the newest GitHub Actions status, run id, and run link.
+- Last Good Data shows the successful `assets/refresh-status.json` cache currently powering the app.
+- If the latest workflow fails, the app keeps using the last successful `assets/live-data.js` cache and marks datasets as cached instead of pending.
+- A failed refresh can happen after a successful refresh. In that case the dashboard can still show fresh cached data while the latest workflow status is failed.
 
 Sync Board does this:
 
