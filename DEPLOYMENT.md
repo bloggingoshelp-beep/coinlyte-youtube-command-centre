@@ -35,6 +35,8 @@ Required GitHub Actions secrets:
 
 The Supabase secrets are needed in GitHub Actions too, not only Vercel. The refresh script reads shared board memory from Supabase before asking Claude for new video ideas, so planned, saved, dismissed, or recently published topics do not keep returning after refresh.
 
+Add the Supabase values in both places. GitHub Actions uses them only for refresh memory; the live app uses the Vercel values for shared Planner, Brand Deals, Team Access, notifications, and login sync.
+
 Refresh flow:
 
 1. The dashboard calls `/api/refresh`.
