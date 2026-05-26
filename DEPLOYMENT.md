@@ -30,13 +30,17 @@ Required GitHub Actions secrets:
 - `ANTHROPIC_API_KEY`
 - `GH_PAT`
 - `VERCEL_DEPLOY_HOOK`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+The Supabase secrets are needed in GitHub Actions too, not only Vercel. The refresh script reads shared board memory from Supabase before asking Claude for new video ideas, so planned, saved, dismissed, or recently published topics do not keep returning after refresh.
 
 Refresh flow:
 
 1. The dashboard calls `/api/refresh`.
 2. The Vercel function triggers the GitHub Actions workflow.
 3. The workflow runs `.github/scripts/refresh.py`.
-4. The script pulls YouTube, analytics, comments, competitor RSS, market RSS, and Claude-generated ideas.
+4. The script pulls YouTube, analytics, comments, competitor RSS, market RSS, Supabase board memory, and Claude-generated ideas.
 5. The workflow commits `assets/live-data.js` and `assets/refresh-status.json`.
 6. The deploy hook publishes the refreshed dashboard.
 

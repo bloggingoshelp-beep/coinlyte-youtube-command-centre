@@ -36,6 +36,7 @@ For future Codex, Claude, Gemini, or human maintainers: read `HANDOVER.md` first
 - Supabase `app_state` stores the shared operating board: Planner, Brand Deals, Team Access, Saved Radar, notifications, and dismissals.
 - Browser local storage remains a fallback/cache, not the long-term source of truth when Supabase is configured.
 - `Refresh Live Data` rebuilds intelligence through GitHub Actions.
+- The refresh workflow reads Supabase board memory before asking Claude for video ideas, so topics already planned, saved, dismissed, or recently published are treated as blocked and should not keep coming back after each refresh.
 - `Sync Board`, `Sync Planner`, `Sync Brands`, and `Sync Team` only sync shared operational data through Supabase.
 
 ## Local Checks
@@ -70,6 +71,7 @@ For the detailed functional checklist, use `TESTING.md`.
 - Supabase `team_users`: hashed team access codes and board permissions.
 - Browser local storage: fallback/offline copy when Supabase is not configured or unavailable.
 - Saved Radar: source-first news links saved from Channel Intelligence for later reading, dismissal, or direct Planner conversion.
+- Refresh memory: active planner titles, saved radar titles, dismissed idea keys, and recent uploads are passed into the AI generation step and checked again after Claude responds.
 
 ## Important Editing Rules
 

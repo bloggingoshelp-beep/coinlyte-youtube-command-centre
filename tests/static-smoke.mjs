@@ -155,6 +155,12 @@ if (!files.refreshScript.includes("assets/live-data.js")) {
 if (!files.workflow.includes("VERCEL_DEPLOY_HOOK")) {
   throw new Error("Refresh workflow should support the Vercel deploy hook.");
 }
+if (!files.workflow.includes("SUPABASE_SERVICE_ROLE_KEY") || !files.refreshScript.includes("fetch_board_memory") || !files.refreshScript.includes("dedupe_generated_ideas")) {
+  throw new Error("Refresh workflow must feed Supabase board memory into AI idea generation and post-filter duplicates.");
+}
+if (!files.app.includes("topicSimilarity") || !files.app.includes("isHandledIdea")) {
+  throw new Error("Frontend idea lists must hide near-duplicate planned or dismissed topics.");
+}
 if (!files.deployWorkflow.includes("VERCEL_DEPLOY_HOOK") || files.deployWorkflow.includes("refresh.py")) {
   throw new Error("Deploy workflow must trigger Vercel without running the refresh script.");
 }

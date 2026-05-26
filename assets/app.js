@@ -621,13 +621,42 @@
   function ideaKey(idea) {
     return `${idea.title || ""}::${idea.source || ""}`.toLowerCase();
   }
+  const TOPIC_STOPWORDS = new Set(["the", "and", "for", "with", "from", "this", "that", "your", "what", "why", "how", "will", "into", "about", "after", "before", "india", "indian", "crypto", "video", "full", "explained", "guide", "impact", "news", "update", "investor", "investors", "price", "kya", "kaise", "hai", "hain", "hoga", "hogi", "liye", "mein", "main", "par", "aur", "se", "ke", "ka", "ki", "ko", "ye"]);
+  function topicTerms(text = "") {
+    return new Set(String(text).toLowerCase()
+      .replace(/https?:\/\/\S+/g, " ")
+      .replace(/[^\w\u0900-\u097f₹$%]+/g, " ")
+      .split(/\s+/)
+      .filter((term) => term.length > 2 && !TOPIC_STOPWORDS.has(term) && !/^\d+$/.test(term)));
+  }
+  function topicSimilarity(a = "", b = "") {
+    const left = topicTerms(a);
+    const right = topicTerms(b);
+    if (!left.size || !right.size) return 0;
+    let overlap = 0;
+    left.forEach((term) => { if (right.has(term)) overlap += 1; });
+    return overlap / Math.max(1, Math.min(left.size, right.size));
+  }
+  function similarToAnyTopic(title, titles, threshold = 0.62) {
+    return titles.some((item) => topicSimilarity(title, item) >= threshold);
+  }
+  function handledTopicTitles() {
+    const pipelineTitles = state.pipeline.flatMap((card) => [card.title, card.researchBrief]).filter(Boolean);
+    const dismissedTitles = state.dismissedIdeas.map((key) => String(key || "").split("::", 1)[0]).filter(Boolean);
+    return [...pipelineTitles, ...dismissedTitles];
+  }
+  function isHandledIdea(idea) {
+    const title = String(idea.title || "");
+    if (!title) return true;
+    return similarToAnyTopic(title, handledTopicTitles());
+  }
   function visibleIdeas() {
     const dismissed = new Set(state.dismissedIdeas);
     const planned = new Set(state.pipeline.map((card) => String(card.title || "").toLowerCase()));
-    return data.ideas.filter((idea) => !dismissed.has(ideaKey(idea)) && !planned.has(String(idea.title || "").toLowerCase()));
+    return data.ideas.filter((idea) => !dismissed.has(ideaKey(idea)) && !planned.has(String(idea.title || "").toLowerCase()) && !isHandledIdea(idea));
   }
   function isPlannedIdea(idea) {
-    return state.pipeline.some((card) => String(card.title || "").toLowerCase() === String(idea.title || "").toLowerCase());
+    return state.pipeline.some((card) => String(card.title || "").toLowerCase() === String(idea.title || "").toLowerCase()) || isHandledIdea(idea);
   }
   function isVisibleGeneratedIdea(idea) {
     return !state.dismissedIdeas.includes(ideaKey(idea)) && !isPlannedIdea(idea);
@@ -2160,8 +2189,11 @@
     }));
   }
   function addIdeaToPipeline(idea) {
-    if (state.pipeline.some((card) => card.title.toLowerCase() === idea.title.toLowerCase())) {
-      toast("That idea is already in the planner.");
+    const title = String(idea.title || "");
+    const alreadyPlanned = state.pipeline.some((card) => String(card.title || "").toLowerCase() === title.toLowerCase())
+      || similarToAnyTopic(title, state.pipeline.flatMap((card) => [card.title, card.researchBrief]).filter(Boolean));
+    if (alreadyPlanned) {
+      toast("That topic is already covered in the planner.");
       return false;
     }
     const primaryUrl = idea.sourceUrl || idea.url || "";

@@ -377,6 +377,8 @@ Set these in GitHub Repo -> Settings -> Secrets and variables -> Actions.
 - `ANTHROPIC_API_KEY`: Claude API key for generated video ideas.
 - `GH_PAT`: token used by the workflow checkout/commit step.
 - `VERCEL_DEPLOY_HOOK`: Vercel deploy hook URL, so refreshed files trigger redeploy.
+- `SUPABASE_URL`: same Supabase project URL used in Vercel. This lets the refresh script read board memory.
+- `SUPABASE_SERVICE_ROLE_KEY`: same Supabase service key used in Vercel. This lets the refresh script read planner, saved radar, and dismissed idea memory server-side.
 
 Never commit secret values.
 
@@ -398,9 +400,14 @@ Main responsibilities:
 7. Fetch crypto/news RSS feeds.
 8. Split news into India, regulation, and market/global groups.
 9. Build market intelligence and news radar inputs.
-10. Call Claude with channel, audience, comment, competitor, analytics, and news context.
-11. Write `assets/live-data.js`.
-12. Write `assets/refresh-status.json`.
+10. Read shared board memory from Supabase when Supabase secrets are present.
+11. Build a blocked-topic list from active planner cards, saved radar, dismissed ideas, and recent CoinLyte uploads.
+12. Call Claude with channel, audience, comment, competitor, analytics, news context, and blocked-topic memory. Claude is asked for 20 candidates so the app can keep the strongest 15 after filtering.
+13. Run a post-Claude duplicate filter so repeated/dismissed/planned topics and source-overloaded clusters are dropped before writing live data.
+14. Write `assets/live-data.js`.
+15. Write `assets/refresh-status.json`.
+
+This board-memory step is important. If Kirtish dismisses an idea, saves a radar source, adds a topic into Planner, or already publishes a similar video, future refreshes should avoid recreating that same concept with slightly different wording. The refresh script also caps source overload so one news event does not create a full board of near-identical video ideas.
 
 If YouTube comment fetching fails with insufficient scopes, the rest of refresh can still complete. To fix comments properly, regenerate the Google refresh token with the required YouTube scopes.
 
@@ -649,6 +656,7 @@ Then browser-test:
 - Source links must open in a new tab.
 - Planner cards created from intelligence must keep source link and research brief.
 - News Radar must remain source-first and scannable. It can save for future review or add directly to Planner, but it should not become another heavy idea board unless explicitly redesigned.
+- Refresh idea generation must use board memory. Do not remove the Supabase memory read, blocked-topic prompt section, or post-Claude duplicate filter.
 - Team access changes must be checked server-side, not only hidden in the UI.
 - Team access codes must remain hashed.
 - Keep backup/import flows working before large UI changes.

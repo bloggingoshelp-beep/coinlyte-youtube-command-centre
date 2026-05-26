@@ -7,6 +7,8 @@ CSEC       = os.environ.get('YT_CLIENT_SECRET','')
 RTOK       = os.environ.get('YT_REFRESH_TOKEN','')
 KEY        = os.environ.get('YT_API_KEY','')
 ANTHROPIC_KEY = os.environ.get('ANTHROPIC_API_KEY','')
+SUPABASE_URL = os.environ.get('SUPABASE_URL','')
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY','')
 CHANNEL_ID = "UCaTJZv99ieTa6f5ht4gEXMA"
 print(f"Secrets: CLIENT_ID={'SET' if CID else 'MISSING'} | SECRET={'SET' if CSEC else 'MISSING'} | REFRESH_TOKEN={'SET' if RTOK else 'MISSING'} | API_KEY={'SET' if KEY else 'MISSING'} | ANTHROPIC={'SET' if ANTHROPIC_KEY else 'MISSING'}")
 
@@ -69,6 +71,114 @@ def analytics_get(path, token):
   raw = safe_get(f'https://youtubeanalytics.googleapis.com/v2/reports?{path}',
                  headers={'Authorization':f'Bearer {token}'})
   return json.loads(raw) if raw else {}
+
+# ── Board memory for AI de-duplication ─────────────────────────────────────
+TOPIC_STOPWORDS = {
+  'the','and','for','with','from','this','that','your','what','why','how','will',
+  'into','about','after','before','india','indian','crypto','video','full',
+  'explained','guide','impact','news','update','investor','investors','price',
+  'kya','kaise','hai','hain','hoga','hogi','liye','mein','main','par','aur',
+  'se','ke','ka','ki','ko','ye','kare','karna','badlega','badlenge'
+}
+
+def topic_tokens(text):
+  text = re.sub(r'https?://\S+', ' ', str(text or '').lower())
+  text = re.sub(r'[^\w\u0900-\u097f₹$%]+', ' ', text)
+  tokens = []
+  for token in text.split():
+    if len(token) < 3: continue
+    if token in TOPIC_STOPWORDS: continue
+    if token.isdigit(): continue
+    tokens.append(token)
+  return set(tokens)
+
+def topic_similarity(a, b):
+  ta, tb = topic_tokens(a), topic_tokens(b)
+  if not ta or not tb: return 0
+  return len(ta & tb) / max(1, min(len(ta), len(tb)))
+
+def fetch_board_memory():
+  empty = {'pipeline': [], 'savedRadar': [], 'dismissedIdeas': []}
+  if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
+    print("Board memory: Supabase secrets missing — AI refresh will only use live-data history")
+    return empty
+  try:
+    base = SUPABASE_URL.rstrip('/')
+    url = f"{base}/rest/v1/app_state?key=eq.operational&select=data&limit=1"
+    req = urllib.request.Request(url, headers={
+      'apikey': SUPABASE_SERVICE_ROLE_KEY,
+      'Authorization': f'Bearer {SUPABASE_SERVICE_ROLE_KEY}',
+      'Content-Type': 'application/json'
+    })
+    with urllib.request.urlopen(req, timeout=12) as resp:
+      rows = json.loads(resp.read())
+      data = rows[0].get('data', {}) if rows else {}
+      memory = {
+        'pipeline': data.get('pipeline') or [],
+        'savedRadar': data.get('savedRadar') or [],
+        'dismissedIdeas': data.get('dismissedIdeas') or []
+      }
+      print(f"Board memory: {len(memory['pipeline'])} planner cards | {len(memory['savedRadar'])} saved radar | {len(memory['dismissedIdeas'])} dismissed ideas")
+      return memory
+  except Exception as e:
+    print(f"Board memory unavailable: {e}")
+    return empty
+
+def memory_titles(board_memory, recent_titles=None):
+  titles = []
+  for card in board_memory.get('pipeline', []):
+    if card.get('title'): titles.append(card['title'])
+    if card.get('researchBrief'): titles.append(card['researchBrief'])
+  for item in board_memory.get('savedRadar', []):
+    if item.get('title'): titles.append(item['title'])
+  for key in board_memory.get('dismissedIdeas', []):
+    title = str(key).split('::', 1)[0].strip()
+    if title: titles.append(title)
+  titles.extend(recent_titles or [])
+  out = []
+  seen = set()
+  for title in titles:
+    clean = re.sub(r'\s+', ' ', str(title or '')).strip()
+    if not clean: continue
+    low = clean.lower()
+    if low not in seen:
+      seen.add(low)
+      out.append(clean)
+  return out
+
+def summarize_memory_for_prompt(titles, limit=45):
+  if not titles:
+    return '- No shared board memory found'
+  return '\n'.join(f'- {title[:140]}' for title in titles[:limit])
+
+def is_memory_duplicate(title, blocked_titles, threshold=0.62):
+  for blocked in blocked_titles:
+    if topic_similarity(title, blocked) >= threshold:
+      return blocked
+  return ''
+
+def dedupe_generated_ideas(ideas, blocked_titles):
+  kept, seen_titles, source_counts = [], [], {}
+  for idea in ideas or []:
+    title = str(idea.get('title', '')).strip()
+    if not title: continue
+    blocked = is_memory_duplicate(title, blocked_titles)
+    if blocked:
+      print(f"  Drop duplicate idea: {title[:65]} ≈ {blocked[:65]}")
+      continue
+    if is_memory_duplicate(title, seen_titles, threshold=0.72):
+      print(f"  Drop repeated generated cluster: {title[:65]}")
+      continue
+    source = str(idea.get('source', 'Unknown')).strip() or 'Unknown'
+    source_counts[source] = source_counts.get(source, 0) + 1
+    if source_counts[source] > 4:
+      print(f"  Drop source overload ({source}): {title[:65]}")
+      continue
+    kept.append(idea)
+    seen_titles.append(title)
+    if len(kept) >= 15:
+      break
+  return kept
 
 # ── RSS feed ───────────────────────────────────────────────────────────────
 def rss_videos(channel_id, max_results=10):
@@ -593,6 +703,10 @@ if ANTHROPIC_KEY:
     mkt_hdls    = [n['title'] for n in market_news[:8]]
     comment_str = ', '.join([t['topic'] for t in themes[:8] if t['count'] > 0] or [t['topic'] for t in themes[:5]])
     top_vids_str = ', '.join([v for v in video_titles.values()][:5]) if video_titles else 'Security guides, XRP explained, Exchange guides'
+    board_memory = fetch_board_memory()
+    recent_upload_memory = cl_titles + [v for v in video_titles.values()]
+    blocked_titles = memory_titles(board_memory, recent_upload_memory)
+    blocked_context = summarize_memory_for_prompt(blocked_titles)
 
     # Build analytics context strings
     geo_str = ''
@@ -646,6 +760,10 @@ All-time top performers (highest views):
 ═══ RECENT UPLOADS (last 30 days — do NOT duplicate) ═══
 {chr(10).join(f'- {t}' for t in cl_titles)}
 
+═══ SHARED BOARD MEMORY — NEVER RECREATE THESE ═══
+These topics are already in the planner, saved for later, previously dismissed, or already published by CoinLyte. Treat them as blocked unless the new angle is clearly different and more specific:
+{blocked_context}
+
 ═══ UNDERPERFORMING RECENT VIDEOS (below 60% average — needs topic pivot) ═══
 {underperf_str if underperf_str else 'No significant underperformers detected'}
 
@@ -673,14 +791,16 @@ Global market (Bitcoin / Ethereum / XRP):
 {chr(10).join(f'- {t}' for t in mkt_hdls) if mkt_hdls else '- No live news'}
 
 ═══ YOUR TASK ═══
-Generate exactly 15 video ideas for CoinLyte. Rules:
+Generate exactly 20 candidate video ideas for CoinLyte. The app will keep the best non-duplicate 15 after memory filtering. Rules:
 1. NEVER duplicate a recent upload topic
-2. For underperforming videos, suggest a PIVOT — same topic, better angle/format/hook
-3. Always add India angle: ₹ amounts, Indian exchange names, India regulation, "Indian investor" framing
-4. Mix formats that historically perform: Comparison > Explained > Security Guide > News reaction > Prediction
-5. Mobile-first titles: punchy, emoji, fear hook OR curiosity hook, under 70 chars
+2. NEVER recreate a topic already in Shared Board Memory, even if the wording changes
+3. Do not make 10 ideas from one news item. Maximum 2 ideas per event cluster and maximum 4 per source group.
+4. For underperforming videos, suggest a PIVOT only when the title is genuinely different from the original
+5. Always add India angle: ₹ amounts, Indian exchange names, India regulation, "Indian investor" framing
+6. Mix formats that historically perform: Comparison > Explained > Security Guide > News reaction > Prediction
+7. Mobile-first titles: punchy, emoji, fear hook OR curiosity hook, under 70 chars
 
-Priority distribution: 4 urgent (news-driven, post this week) + 6 high (competitor gaps) + 5 medium (evergreen/community asks)
+Priority distribution for candidates: 5 urgent (news-driven, post this week) + 8 high (competitor gaps) + 7 medium (evergreen/community asks)
 
 Sources for each idea MUST be one of: "Coin Bureau", "Cyber Scrilla", "India News", "Regulation News", "Market News", "Community Comments", "Analytics Data", "Topic Pivot"
 
@@ -692,7 +812,7 @@ For each idea return a JSON object with EXACTLY these fields:
 - "why": 1-2 sentences — specific India angle + performance prediction based on channel data
 - "source": exact source name from the list above
 
-Return ONLY a valid JSON array of 15 objects. Zero markdown, zero explanation."""
+Return ONLY a valid JSON array of 20 objects. Zero markdown, zero explanation."""
 
     payload_claude = json.dumps({
       "model": "claude-haiku-4-5-20251001",
@@ -715,8 +835,10 @@ Return ONLY a valid JSON array of 15 objects. Zero markdown, zero explanation.""
       # Strip markdown code fences if present
       if content.startswith('```'):
         content = re.sub(r'```[\w]*\n?', '', content).strip()
-      video_ideas = json.loads(content)
-      print(f"Claude generated {len(video_ideas)} video ideas")
+      raw_video_ideas = json.loads(content)
+      print(f"Claude generated {len(raw_video_ideas)} raw video ideas")
+      video_ideas = dedupe_generated_ideas(raw_video_ideas, blocked_titles)
+      print(f"AI memory filter kept {len(video_ideas)} video ideas")
   except Exception as e:
     print(f"Claude API error: {e}")
     video_ideas = []
