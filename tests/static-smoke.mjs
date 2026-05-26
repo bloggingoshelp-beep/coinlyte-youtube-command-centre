@@ -134,6 +134,15 @@ if (!files.refresh.includes("requireOwner") || !files.status.includes("requireOw
 if (!files.app.includes('plannerMode: "board"')) {
   throw new Error("Content Planner must default to board mode.");
 }
+if (!files.app.includes('plannerSort: store.get("cl_planner_sort_v1", "deadline")') || !files.app.includes('id="planner-sort"') || !files.app.includes("sortPlannerCards")) {
+  throw new Error("Planner board must support persistent stage sorting with due-date-first default.");
+}
+if (!files.app.includes("data-drop-stage") || !files.app.includes("data-drag-card") || !files.app.includes("moveCardToStage")) {
+  throw new Error("Planner cards must support direct drag/drop movement across stages.");
+}
+if (!files.refreshScript.includes("is_scam_comment") || !files.refreshScript.includes("SCAM_AUTHOR_PREFIXES = ['oliv']") || !files.app.includes("isLikelyScamComment")) {
+  throw new Error("Community Pulse must filter scam reply farms such as Oliv-style fake accounts.");
+}
 if (!files.notify.includes("requireSession") || files.notify.includes("requireOwner")) {
   throw new Error("Email notifications must allow any logged-in app user, not owner-only.");
 }

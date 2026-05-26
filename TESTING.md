@@ -45,12 +45,16 @@ npm test
 - Saved News Radar links appear under Content Planner -> Saved Radar and survive Sync Planner.
 - Competitor Intel shows competitor videos and generated CoinLyte-fit ideas.
 - Community Pulse shows comment-led video ideas before raw top comments.
+- Community Pulse excludes obvious scam/reply-farm comments, including fake author names that start with `Oliv`, contact-me bait, Telegram/WhatsApp bait, and phone-number spam.
 - Add-to-Planner removes the idea from the loose idea list.
 - Dismiss hides the idea/card.
 
 ## Planner
 
 - Planner board shows stage columns.
+- Planner board defaults to Board mode and each stage can be sorted by due date, urgency, assigned user, newest, oldest, or title.
+- Default stage sorting puts nearest target deadlines first, with urgent/high priority used as tie breakers.
+- Planner cards can be dragged and dropped directly into any stage column, while Back/Fwd still works for one-stage moves.
 - Backup Board downloads JSON.
 - Import Backup asks for confirmation before replacing local data.
 - Add Video opens modal.

@@ -84,6 +84,7 @@ Important behavior:
 - News Radar is source-first. It is for scanning important crypto news, opening source links, dismissing noise, saving links to Content Planner -> Saved Radar, or sending a source directly into Planner when Kirtish wants to act immediately. Do not turn News Radar into another video-idea generator unless Kirtish explicitly asks.
 - Competitor Intelligence should show competitor uploads and CoinLyte-fit ideas inspired by them.
 - Community Pulse should show comment-led video ideas before raw top comments.
+- Community Pulse must not learn from obvious scam reply farms. The refresh script filters scam text, phone/contact bait, and fake author patterns such as usernames beginning with `Oliv`. The frontend repeats the same safety filter as a fallback for older cached `live-data.js`.
 - Dismissed intelligence cards must stay hidden until restored or local/cloud state is cleared.
 - Source links must open in a new tab.
 
@@ -118,6 +119,13 @@ Current stages:
 - Published.
 
 Note: The app intentionally uses `Research`, not `Scripting`, because Kirtish does not write full scripts.
+
+Planner cards can be moved in two ways:
+
+- Use `Back` and `Fwd` for simple one-stage moves.
+- Drag a card and drop it into any stage column for direct movement.
+
+Each stage uses the active planner sort order. The default is `Due date first`, which means cards with the nearest target deadline appear at the top, then urgent/high priority, then newest cards. Other sort modes are urgency, assigned user, newest, oldest, and title. Keep this default because the board is meant to surface what needs attention first.
 
 Planner cards use a target deadline field, not only a date. The modal stores this as a browser `datetime-local` value such as `2026-05-22T18:30`, and cards/calendar/command status parse it through `parseTargetDate`. Keep this as date plus time so editors know the same-day handoff deadline, not only the upload day.
 

@@ -20,7 +20,32 @@ SCAM_WORDS = ['whatsapp','telegram','signal','dm me','message me','invest with m
   'recovery','lost funds','contact me','reach me','bit.ly','t.me','wa.me',
   'pump','signal group','join my','100x profit']
 
+SCAM_AUTHOR_PREFIXES = ['oliv']
+SCAM_AUTHOR_WORDS = ['whatsapp','telegram','signal','crypto help','trading expert',
+  'investment coach','recovery agent','account manager','support team']
+SCAM_TEXT_PATTERNS = [
+  r'\+?\d[\d\s().-]{7,}\d',
+  r'\b(text|reply|message|contact|reach)\s+(me|him|her|us)\b',
+  r'\b(whats\s?app|telegram|signal)\b',
+  r'\b(recover|recovery)\s+(your\s+)?(funds|money|wallet|account)\b',
+  r'\bguaranteed\s+(profit|returns?)\b'
+]
+
 def is_scam(t): return any(s in t.lower() for s in SCAM_WORDS)
+
+def is_scam_author(author):
+  raw = (author or '').lower().strip()
+  compact = re.sub(r'[^a-z0-9]+', '', raw)
+  if any(compact.startswith(prefix) for prefix in SCAM_AUTHOR_PREFIXES):
+    return True
+  return any(word in raw for word in SCAM_AUTHOR_WORDS)
+
+def is_scam_comment(text, author=''):
+  if not text: return True
+  if is_scam_author(author): return True
+  if is_scam(text): return True
+  lower = text.lower()
+  return any(re.search(pattern, lower) for pattern in SCAM_TEXT_PATTERNS)
 
 def comment_intent(t):
   t = t.lower()
@@ -389,9 +414,10 @@ if KEY:
           for item in vp.get('items',[]):
             c = item.get('snippet',{}).get('topLevelComment',{}).get('snippet',{})
             text = c.get('textOriginal','') or c.get('textDisplay','')
-            if text and not is_scam(text) and len(text.strip()) > 10:
+            author = c.get('authorDisplayName','')
+            if text and not is_scam_comment(text, author) and len(text.strip()) > 10:
               all_comments.append({
-                'author': c.get('authorDisplayName',''),
+                'author': author,
                 'text':   text[:250],
                 'age':    days_ago(c.get('publishedAt','')),
                 'intent': comment_intent(text),
@@ -418,9 +444,10 @@ if KEY:
           for item in vp.get('items',[]):
             c = item.get('snippet',{}).get('topLevelComment',{}).get('snippet',{})
             text = c.get('textOriginal','') or c.get('textDisplay','')
-            if text and not is_scam(text) and len(text.strip()) > 10:
+            author = c.get('authorDisplayName','')
+            if text and not is_scam_comment(text, author) and len(text.strip()) > 10:
               all_comments.append({
-                'author': c.get('authorDisplayName',''),
+                'author': author,
                 'text':   text[:250],
                 'age':    days_ago(c.get('publishedAt','')),
                 'intent': comment_intent(text),
@@ -438,12 +465,13 @@ if KEY:
       c   = item.get('snippet',{}).get('topLevelComment',{}).get('snippet',{})
       vid_info = item.get('snippet',{})
       text = c.get('textOriginal','') or c.get('textDisplay','')
-      if text and not is_scam(text) and len(text.strip()) > 10:
+      author = c.get('authorDisplayName','')
+      if text and not is_scam_comment(text, author) and len(text.strip()) > 10:
         # Get video title from coinlyte_vids lookup or snippet
         vid_id = vid_info.get('videoId','')
         vid_title = next((v['title'] for v in coinlyte_vids if v.get('videoId')==vid_id), f'Video {vid_id[:8]}')
         all_comments.append({
-          'author':      c.get('authorDisplayName',''),
+          'author':      author,
           'text':        text[:250],
           'age':         days_ago(c.get('publishedAt','')),
           'intent':      comment_intent(text),

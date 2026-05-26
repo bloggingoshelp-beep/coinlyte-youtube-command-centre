@@ -9,6 +9,8 @@ For future Codex, Claude, Gemini, or human maintainers: read `HANDOVER.md` first
 - Shows a daily Command board for the next video decision, blockers, team ownership, and sponsor watch.
 - Tracks YouTube analytics, latest uploads, audience comments, competitor signals, market intelligence, and AI-generated video ideas.
 - Converts ideas into Content Planner cards with source links, locked research briefs, editor reference sources, assignees, target date/time deadlines, and stage movement.
+- Keeps Community Pulse safer by filtering scam/reply-farm comments before they can influence video ideas.
+- Lets planner cards move with Back/Fwd controls or direct drag-and-drop into any stage, with each stage sorted by due date first by default.
 - Tracks Brand Deals and sponsor records.
 - Supports Team Access, app-area permissions, hashed team login codes via Supabase, role-aware in-app notifications with read/dismiss/dismiss-all controls, and optional email notifications.
 - Production login now uses a User ID plus access code. Owners can use `Mrvyas`, `owner`, or `kirtish` by default; team users use the User ID created in Team Access.
@@ -54,6 +56,8 @@ Then open the local app and manually check:
 - Add idea to Planner.
 - Edit planner card.
 - Source buttons open in a new tab.
+- Community Pulse does not show or learn from obvious scam comments such as fake `Oliv...` reply accounts.
+- Planner Board supports drag/drop into any stage and stage sorting defaults to nearest deadline first.
 - Brand modal saves.
 - Team member modal saves multiple notification channels.
 - Owner settings opens from the CoinLyte profile logo and logout returns to the login page. Team users see a smaller account panel with logout only.

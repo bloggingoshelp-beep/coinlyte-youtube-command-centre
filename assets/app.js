@@ -67,6 +67,7 @@
     intelligenceTab: "health",
     brandTab: "directory",
     plannerStage: "all",
+    plannerSort: store.get("cl_planner_sort_v1", "deadline"),
     plannerQuery: "",
     hubCategory: "all",
     hubQuery: "",
@@ -115,6 +116,20 @@
     if (value >= 1000) return `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}K`;
     return String(value || 0);
   }
+  function isLikelyScamComment(text = "", author = "") {
+    const rawAuthor = String(author || "").toLowerCase().trim();
+    const compactAuthor = rawAuthor.replace(/[^a-z0-9]+/g, "");
+    const body = String(text || "").toLowerCase();
+    const scamAuthor = compactAuthor.startsWith("oliv") || ["whatsapp", "telegram", "signal", "tradingexpert", "recoveryagent", "accountmanager"].some((word) => compactAuthor.includes(word));
+    const scamText = [
+      "whatsapp", "telegram", "signal", "dm me", "message me", "contact me", "reach me",
+      "guaranteed profit", "double your", "lost funds", "recovery agent", "account manager",
+      "t.me", "wa.me", "bit.ly"
+    ].some((word) => body.includes(word));
+    const phoneLike = /\+?\d[\d\s().-]{7,}\d/.test(body);
+    const replyBait = /\b(text|reply|message|contact|reach)\s+(me|him|her|us)\b/.test(body);
+    return scamAuthor || scamText || phoneLike || replyBait;
+  }
   function applyLiveData(target, live) {
     if (!live) {
       target.liveStatus = "seed";
@@ -155,7 +170,10 @@
       })).sort((a, b) => b.score - a.score);
     }
     if (Array.isArray(live.comments) && live.comments.length) {
-      target.comments = live.comments.slice(0, 24).map((comment) => ({
+      target.comments = live.comments
+        .filter((comment) => !isLikelyScamComment(comment.text || "", comment.author || ""))
+        .slice(0, 24)
+        .map((comment) => ({
         author: comment.author || "Viewer",
         intent: labelCase(comment.intent || "comment"),
         text: comment.text || "",
@@ -352,6 +370,12 @@
   function emptyChecks() {
     return Object.fromEntries(CHECKS.map((key) => [key, false]));
   }
+  function createdTimeFallback(card = {}) {
+    const idTime = String(card.id || "").match(/(\d{13})/)?.[1];
+    const fromId = idTime ? Number(idTime) : 0;
+    const fromTarget = parseTargetDate(card.target)?.getTime() || 0;
+    return new Date(fromId || fromTarget || Date.now()).toISOString();
+  }
   function normalizePipeline(cards) {
     return (cards || []).map((card) => {
       const checks = emptyChecks();
@@ -366,7 +390,16 @@
       const mergedLinks = [primary, ...sourceLinks]
         .filter(Boolean)
         .filter((link, index, all) => all.findIndex((item) => (item.url || item) === (link.url || link)) === index);
-      return withId({ ...card, stage: card.stage || "ideas", checks, researchBrief, editorNotes, sourceLinks: mergedLinks });
+      return withId({
+        ...card,
+        stage: card.stage || "ideas",
+        checks,
+        researchBrief,
+        editorNotes,
+        sourceLinks: mergedLinks,
+        createdAt: card.createdAt || createdTimeFallback(card),
+        updatedAt: card.updatedAt || card.createdAt || createdTimeFallback(card)
+      });
     });
   }
   function radarKey(item = {}) {
@@ -2219,7 +2252,9 @@
       editorNotes: "",
       source: idea.source || "Intelligence",
       sourceUrl: primaryUrl,
-      sourceLinks
+      sourceLinks,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     });
     state.pipeline.unshift(newCard);
     savePipeline();
@@ -2294,6 +2329,14 @@
         <div class="toolbar">
           <input id="planner-query" value="${escapeHTML(state.plannerQuery)}" placeholder="Search title, category, sponsor">
           <select id="planner-stage">${stageOptions(state.plannerStage)}</select>
+          <select id="planner-sort" title="Sort every stage">
+            <option value="deadline" ${state.plannerSort === "deadline" ? "selected" : ""}>Due date first</option>
+            <option value="urgent" ${state.plannerSort === "urgent" ? "selected" : ""}>Urgency first</option>
+            <option value="assignee" ${state.plannerSort === "assignee" ? "selected" : ""}>Assigned user</option>
+            <option value="newest" ${state.plannerSort === "newest" ? "selected" : ""}>Newest created</option>
+            <option value="oldest" ${state.plannerSort === "oldest" ? "selected" : ""}>Oldest created</option>
+            <option value="title" ${state.plannerSort === "title" ? "selected" : ""}>Title A-Z</option>
+          </select>
           <div class="segmented"><button data-mode="list" class="${state.plannerMode === "list" ? "active" : ""}" type="button">List</button><button data-mode="board" class="${state.plannerMode === "board" ? "active" : ""}" type="button">Board</button></div>
         </div>
       </div>
@@ -2306,6 +2349,11 @@
     });
     $("#planner-stage").addEventListener("change", (event) => {
       state.plannerStage = event.target.value;
+      renderPlanner();
+    });
+    $("#planner-sort").addEventListener("change", (event) => {
+      state.plannerSort = event.target.value;
+      store.set("cl_planner_sort_v1", state.plannerSort);
       renderPlanner();
     });
     $all("[data-mode]").forEach((btn) => btn.addEventListener("click", () => {
@@ -2861,11 +2909,49 @@
   }
   function filteredPipeline() {
     const q = state.plannerQuery.toLowerCase().trim();
-    return state.pipeline.filter((card) => {
+    const cards = state.pipeline.filter((card) => {
       const inStage = state.plannerStage === "all" || card.stage === state.plannerStage;
       const text = `${card.title} ${card.category} ${card.sponsor} ${card.priority}`.toLowerCase();
       return inStage && (!q || text.includes(q));
     });
+    return sortPlannerCards(cards);
+  }
+  function sortPlannerCards(cards = []) {
+    const sorted = [...cards];
+    const sort = state.plannerSort || "deadline";
+    sorted.sort((a, b) => {
+      if (sort === "urgent") return priorityRank(a.priority) - priorityRank(b.priority) || deadlineRank(a) - deadlineRank(b) || newestRank(a, b);
+      if (sort === "assignee") return assigneeRank(a).localeCompare(assigneeRank(b)) || deadlineRank(a) - deadlineRank(b) || priorityRank(a.priority) - priorityRank(b.priority);
+      if (sort === "newest") return newestRank(a, b);
+      if (sort === "oldest") return createdRank(a) - createdRank(b);
+      if (sort === "title") return String(a.title || "").localeCompare(String(b.title || ""));
+      return deadlineRank(a) - deadlineRank(b) || priorityRank(a.priority) - priorityRank(b.priority) || newestRank(a, b);
+    });
+    return sorted;
+  }
+  function priorityRank(priority = "") {
+    const value = String(priority).toLowerCase();
+    if (value === "urgent") return 0;
+    if (value === "high") return 1;
+    if (value === "medium") return 2;
+    return 3;
+  }
+  function deadlineRank(card = {}) {
+    const date = parseTargetDate(card.target);
+    return date ? date.getTime() : Number.POSITIVE_INFINITY;
+  }
+  function createdRank(card = {}) {
+    const explicit = Date.parse(card.createdAt || card.updatedAt || "");
+    if (!Number.isNaN(explicit)) return explicit;
+    const idTime = String(card.id || "").match(/(\d{13})/)?.[1];
+    return idTime ? Number(idTime) : 0;
+  }
+  function newestRank(a, b) {
+    return createdRank(b) - createdRank(a);
+  }
+  function assigneeRank(card = {}) {
+    const name = teamMemberName(card.assignedTo);
+    return name ? name.toLowerCase() : "0-unassigned";
   }
   function plannerList(cards) {
     if (!cards.length) return `<div class="empty">No planner cards match this filter.</div>`;
@@ -2873,9 +2959,19 @@
   }
   function plannerBoard(cards) {
     return `<div class="board">${STAGES.map(([key, label]) => {
-      const stageCards = cards.filter((card) => card.stage === key);
-      return `<div class="board-col stage-${key}"><h4>${stageEmoji(key)} ${label}<span>${stageCards.length}</span></h4>${stageCards.map(cardHTML).join("") || `<div class="empty">No cards</div>`}</div>`;
+      const stageCards = sortPlannerCards(cards.filter((card) => card.stage === key));
+      return `<div class="board-col stage-${key}" data-drop-stage="${key}"><h4>${stageEmoji(key)} ${label}<span>${stageCards.length}</span></h4><div class="stage-sort-note">${plannerSortLabel()}</div>${stageCards.map(cardHTML).join("") || `<div class="empty">No cards</div>`}</div>`;
     }).join("")}</div>`;
+  }
+  function plannerSortLabel() {
+    return {
+      deadline: "Due date first",
+      urgent: "Urgency first",
+      assignee: "Assigned user",
+      newest: "Newest created",
+      oldest: "Oldest created",
+      title: "Title A-Z"
+    }[state.plannerSort || "deadline"] || "Due date first";
   }
   function cardHTML(card) {
     const stageIndex = STAGES.findIndex(([key]) => key === card.stage);
@@ -2886,7 +2982,7 @@
     const assignee = teamMemberFor(card.assignedTo);
     const assigneeName = assignee?.name || "";
     const assigneeClass = assignee?.accessStatus === "Paused" ? "red" : assigneeName ? "green" : "gray";
-    return `<article class="list-card pipeline-card pipeline-${tone} priority-${priority}" data-card="${card.id}">
+    return `<article class="list-card pipeline-card pipeline-${tone} priority-${priority}" data-card="${card.id}" data-drag-card="${card.id}" draggable="true">
       <div class="card-actions"><span class="tag ${priority === "urgent" ? "red" : priority === "high" ? "gold" : "blue"}">${priority === "urgent" ? "🔴" : priority === "high" ? "🟡" : "⚪"} ${escapeHTML(card.priority || "Medium")}</span><span class="tag teal">${stageEmoji(card.stage)} ${escapeHTML(stageLabel(card.stage))}</span>${card.assignedTo ? `<span class="tag ${assigneeClass}">👤 ${escapeHTML(assigneeName || "Unknown owner")}</span>` : `<span class="tag red">👤 Unassigned</span>`}</div>
       <h4>${escapeHTML(withLeadingEmoji(card.title, emoji))}</h4>
       <div class="panel-sub">${escapeHTML(card.category)} | Deadline ${escapeHTML(formatTargetDeadline(card.target))}</div>
@@ -2920,6 +3016,32 @@
     $all("[data-next]").forEach((btn) => btn.addEventListener("click", () => moveCard(btn.dataset.next, 1)));
     $all("[data-back]").forEach((btn) => btn.addEventListener("click", () => moveCard(btn.dataset.back, -1)));
     $all("[data-delete]").forEach((btn) => btn.addEventListener("click", () => deleteCard(btn.dataset.delete)));
+    bindPlannerDragDrop();
+  }
+  function bindPlannerDragDrop() {
+    $all("[data-drag-card]").forEach((cardEl) => {
+      cardEl.addEventListener("dragstart", (event) => {
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", cardEl.dataset.dragCard);
+        cardEl.classList.add("dragging");
+      });
+      cardEl.addEventListener("dragend", () => cardEl.classList.remove("dragging"));
+    });
+    $all("[data-drop-stage]").forEach((column) => {
+      column.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        column.classList.add("drop-ready");
+      });
+      column.addEventListener("dragleave", (event) => {
+        if (!column.contains(event.relatedTarget)) column.classList.remove("drop-ready");
+      });
+      column.addEventListener("drop", (event) => {
+        event.preventDefault();
+        column.classList.remove("drop-ready");
+        const id = event.dataTransfer.getData("text/plain");
+        if (id) moveCardToStage(id, column.dataset.dropStage);
+      });
+    });
   }
   function wireSourceNavigation(root = document) {
     $all("[data-open-url]", root).forEach((link) => {
@@ -2933,9 +3055,18 @@
   }
   function moveCard(id, delta) {
     const card = state.pipeline.find((item) => item.id === id);
+    if (!card) return;
     const index = STAGES.findIndex(([key]) => key === card.stage);
+    const nextStage = STAGES[Math.max(0, Math.min(STAGES.length - 1, index + delta))][0];
+    moveCardToStage(id, nextStage);
+  }
+  function moveCardToStage(id, nextStage) {
+    const card = state.pipeline.find((item) => item.id === id);
+    if (!card || !STAGES.some(([key]) => key === nextStage)) return;
     const previousStage = card.stage;
-    card.stage = STAGES[Math.max(0, Math.min(STAGES.length - 1, index + delta))][0];
+    if (previousStage === nextStage) return;
+    card.stage = nextStage;
+    card.updatedAt = new Date().toISOString();
     savePipeline();
     const actor = currentSessionMember();
     const isTeamProgress = state.session?.role !== "owner" && actor?.notifyStages !== false && previousStage !== card.stage;
@@ -2949,6 +3080,7 @@
     }
     persistBoardNow({ force: true });
     renderPlanner();
+    toast(`Moved to ${stageLabel(card.stage)}.`);
   }
   function deleteCard(id) {
     const card = state.pipeline.find((item) => item.id === id);
@@ -3072,7 +3204,9 @@
         notes: "",
         researchBrief: brief,
         editorNotes: form.get("editorNotes").trim(),
-        checks: current.checks || emptyChecks()
+        checks: current.checks || emptyChecks(),
+        createdAt: current.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
       if (editing) state.pipeline = state.pipeline.map((item) => item.id === current.id ? next : item);
       else state.pipeline.unshift(next);
