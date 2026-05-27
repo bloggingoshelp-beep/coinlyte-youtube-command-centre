@@ -237,6 +237,7 @@ def oembed_title(video_id):
 
 # ── News RSS ───────────────────────────────────────────────────────────────
 MAX_NEWS_AGE_DAYS = 7
+HOT_NARRATIVE_AGE_DAYS = 14
 
 def _parse_pub(pub_str):
   """Parse RSS pubDate to a timezone-aware UTC datetime. Returns None on failure."""
@@ -265,7 +266,7 @@ def _days_old(pub_str):
   if dt is None: return 0        # unknown age → include
   return max(0, (utc_now() - dt).days)
 
-def parse_news_rss(raw, region, max_items=6):
+def parse_news_rss(raw, region, max_items=6, max_age_days=MAX_NEWS_AGE_DAYS):
   items = []
   try:
     root = ET.fromstring(raw)
@@ -277,7 +278,7 @@ def parse_news_rss(raw, region, max_items=6):
       pub   = item.find('pubDate')
       pub_str = (pub.text or '').strip() if pub is not None else ''
       age = _days_old(pub_str)
-      if age > MAX_NEWS_AGE_DAYS:
+      if age > max_age_days:
         continue                 # skip stale news
       if title is not None and title.text:
         t = title.text.strip()
@@ -610,13 +611,19 @@ NEWS_FEEDS = [
   ('altcoins',      'https://news.google.com/rss/search?q=altcoin+crypto+bull+run+top+coins+2026&hl=en&gl=US&ceid=US:en', 'Market'),
   ('ai_crypto',     'https://news.google.com/rss/search?q=AI+crypto+token+artificial+intelligence+blockchain+2026&hl=en&gl=US&ceid=US:en', 'Market'),
   ('rwa',           'https://news.google.com/rss/search?q=RWA+real+world+assets+tokenization+crypto+2026&hl=en&gl=US&ceid=US:en', 'Market'),
+  # Hot narrative radar: fast-moving stories that may not fit normal coin/regulation feeds.
+  ('hot_hyperliquid', 'https://news.google.com/rss/search?q=Hyperliquid+HYPE+SpaceX+pre-IPO+tokenized+stocks+crypto&hl=en&gl=US&ceid=US:en', 'Hot'),
+  ('hot_tokenized_stocks', 'https://news.google.com/rss/search?q=tokenized+stocks+pre-IPO+perpetuals+crypto+xStocks+RWA&hl=en&gl=US&ceid=US:en', 'Hot'),
+  ('hot_top_coins', 'https://news.google.com/rss/search?q=bitcoin+ethereum+solana+xrp+bnb+dogecoin+cardano+sui+hyperliquid+crypto+breaking+news&hl=en&gl=US&ceid=US:en', 'Hot'),
+  ('hot_market_structure', 'https://news.google.com/rss/search?q=crypto+exchange+perpetuals+liquidation+whale+ETF+tokenization+India+investors&hl=en&gl=US&ceid=US:en', 'Hot'),
 ]
 
 all_news = {}
 for key_name, url, region in NEWS_FEEDS:
   raw = safe_get(url, headers={'User-Agent': 'Mozilla/5.0 (compatible; newsbot/1.0)'}, timeout=12)
   if raw:
-    items = parse_news_rss(raw, region, max_items=5)
+    max_age = HOT_NARRATIVE_AGE_DAYS if region == 'Hot' else MAX_NEWS_AGE_DAYS
+    items = parse_news_rss(raw, region, max_items=5, max_age_days=max_age)
     all_news[key_name] = items
     print(f"  {key_name}: {len(items)} articles")
   else:
@@ -661,11 +668,16 @@ market_news = dedup(
   all_news.get('rwa',[])
 )[:20]
 
+hot_news = dedup(
+  all_news.get('hot_hyperliquid',[]) + all_news.get('hot_tokenized_stocks',[]) +
+  all_news.get('hot_top_coins',[]) + all_news.get('hot_market_structure',[])
+)[:15]
+
 news_intelligence = {
   'india': india_news, 'regulation': reg_news,
-  'market': market_news, 'fetchedAt': TODAY
+  'market': market_news, 'hot': hot_news, 'fetchedAt': TODAY
 }
-print(f"News: India={len(india_news)} | Reg={len(reg_news)} | Market={len(market_news)} | Total={len(india_news)+len(reg_news)+len(market_news)}")
+print(f"News: India={len(india_news)} | Reg={len(reg_news)} | Market={len(market_news)} | Hot={len(hot_news)} | Total={len(india_news)+len(reg_news)+len(market_news)+len(hot_news)}")
 
 # ═══════════════════════════════════════════════════════════════════════════
 # STEP 6.5: Video Performance Analysis — find underperformers + top formats
@@ -728,7 +740,8 @@ if ANTHROPIC_KEY:
     cs_titles   = [v['title'] for v in cyberscrilla_vids[:8]]
     india_hdls  = [n['title'] for n in india_news[:8]]
     reg_hdls    = [n['title'] for n in reg_news[:5]]
-    mkt_hdls    = [n['title'] for n in market_news[:8]]
+    mkt_hdls    = [n['title'] for n in market_news[:10]]
+    hot_hdls    = [n['title'] for n in hot_news[:10]]
     comment_str = ', '.join([t['topic'] for t in themes[:8] if t['count'] > 0] or [t['topic'] for t in themes[:5]])
     top_vids_str = ', '.join([v for v in video_titles.values()][:5]) if video_titles else 'Security guides, XRP explained, Exchange guides'
     board_memory = fetch_board_memory()
@@ -818,6 +831,9 @@ US regulation (GENIUS Act / Clarity Act):
 Global market (Bitcoin / Ethereum / XRP):
 {chr(10).join(f'- {t}' for t in mkt_hdls) if mkt_hdls else '- No live news'}
 
+Hot narrative radar (top coins, Hyperliquid/HYPE, SpaceX pre-IPO, tokenized stocks, perps, RWA):
+{chr(10).join(f'- {t}' for t in hot_hdls) if hot_hdls else '- No live hot narratives'}
+
 ═══ YOUR TASK ═══
 Generate exactly 20 candidate video ideas for CoinLyte. The app will keep the best non-duplicate 15 after memory filtering. Rules:
 1. NEVER duplicate a recent upload topic
@@ -904,7 +920,7 @@ status_payload = {
     'analytics': bool(analytics),
     'comments': len(all_comments),
     'competitors': len(coin_bureau_vids) + len(cyberscrilla_vids) + len(bankless_vids),
-    'news': len(india_news) + len(reg_news) + len(market_news),
+    'news': len(india_news) + len(reg_news) + len(market_news) + len(hot_news),
     'ideas': len(video_ideas)
   }
 }
@@ -914,4 +930,4 @@ with open('assets/refresh-status.json','w',encoding='utf-8') as f:
 print(f"Wrote assets/live-data.js ({len(payload):,} chars)")
 print(f"Wrote assets/refresh-status.json")
 
-print(f"\n✅ Done: {TODAY} | CoinLyte:{len(coinlyte_vids)} | CB:{len(coin_bureau_vids)} | CS:{len(cyberscrilla_vids)} | Comments:{len(all_comments)} | News:India={len(india_news)},Reg={len(reg_news)},Mkt={len(market_news)} | Ideas:{len(video_ideas)}")
+print(f"\n✅ Done: {TODAY} | CoinLyte:{len(coinlyte_vids)} | CB:{len(coin_bureau_vids)} | CS:{len(cyberscrilla_vids)} | Comments:{len(all_comments)} | News:India={len(india_news)},Reg={len(reg_news)},Mkt={len(market_news)},Hot={len(hot_news)} | Ideas:{len(video_ideas)}")

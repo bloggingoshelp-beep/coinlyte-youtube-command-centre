@@ -119,6 +119,12 @@ if (!files.app.includes("pickCommandCard") || !files.app.includes("Skip Today") 
 if (!files.app.includes("data-add-radar-planner") || !files.app.includes("data-add-saved-radar") || !files.app.includes("data-dismiss-saved-radar")) {
   throw new Error("News Radar and Saved Radar must support direct planner conversion and saved radar dismissal.");
 }
+if (!files.app.includes("Hot Narrative") || !files.app.includes("market.hot") || !files.refreshScript.includes("hot_hyperliquid")) {
+  throw new Error("Channel Intelligence must include the Hot Narrative lane and refresh feeds.");
+}
+if (!files.refreshScript.includes("Hyperliquid+HYPE+SpaceX+pre-IPO") || !files.refreshScript.includes("hot_news") || !files.refreshScript.includes("HOT_NARRATIVE_AGE_DAYS")) {
+  throw new Error("Refresh must explicitly monitor Hyperliquid/HYPE, SpaceX pre-IPO, tokenized stock narratives.");
+}
 if (files.app.includes("data-remove-saved-radar")) {
   throw new Error("Saved Radar should use Dismiss wording/actions instead of Remove.");
 }

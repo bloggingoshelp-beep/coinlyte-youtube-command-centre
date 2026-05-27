@@ -40,8 +40,9 @@ npm test
 
 ## Intelligence
 
-- Market Intel shows India policy, US regulation, and global market sections.
-- News Radar shows source-only cards with source, save, add-planner, and dismiss actions.
+- Market Intel shows India policy, US regulation, global market, and Hot Narrative sections.
+- Hot Narrative cards cover fast-moving source clusters such as top coins, Hyperliquid/HYPE, SpaceX pre-IPO, tokenized stocks, perps, RWA, liquidations, and market-structure shifts. This lane intentionally accepts stories up to 14 days old so still-burning narratives do not disappear too early.
+- News Radar shows source-only cards with source, save, add-planner, dismiss actions, and the Hot Narrative count.
 - Saved News Radar links appear under Content Planner -> Saved Radar and survive Sync Planner.
 - Competitor Intel shows competitor videos and generated CoinLyte-fit ideas.
 - Community Pulse shows comment-led video ideas before raw top comments.

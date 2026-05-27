@@ -75,6 +75,7 @@ For the detailed functional checklist, use `TESTING.md`.
 - Supabase `team_users`: hashed team access codes and board permissions.
 - Browser local storage: fallback/offline copy when Supabase is not configured or unavailable.
 - Saved Radar: source-first news links saved from Channel Intelligence for later reading, dismissal, or direct Planner conversion.
+- Hot Narrative Radar: fast-moving news lane for top coins, Hyperliquid/HYPE, SpaceX pre-IPO, tokenized stocks, perps, RWA, liquidations, and other stories that may not fit India policy, US regulation, or broad global market buckets. It uses a 14-day freshness window while normal news stays at 7 days.
 - Refresh memory: active planner titles, saved radar titles, dismissed idea keys, and recent uploads are passed into the AI generation step and checked again after Claude responds.
 
 ## Important Editing Rules

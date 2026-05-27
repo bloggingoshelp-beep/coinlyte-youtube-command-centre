@@ -81,6 +81,7 @@ Channel Intelligence is the source of market and audience insight. It includes:
 Important behavior:
 
 - Market Intelligence can create planner-ready ideas.
+- Market Intelligence has four lanes: India Policy, US Regulation, Global Market, and Hot Narrative. Hot Narrative is for fast-moving clusters such as top-coin breakouts, Hyperliquid/HYPE, SpaceX pre-IPO or tokenized stock stories, perpetuals, RWA, liquidations, and exchange/market-structure shifts that may not fit the normal news buckets. Normal news keeps a 7-day window; Hot Narrative keeps a 14-day window because those stories can stay actionable longer.
 - News Radar is source-first. It is for scanning important crypto news, opening source links, dismissing noise, saving links to Content Planner -> Saved Radar, or sending a source directly into Planner when Kirtish wants to act immediately. Do not turn News Radar into another video-idea generator unless Kirtish explicitly asks.
 - Competitor Intelligence should show competitor uploads and CoinLyte-fit ideas inspired by them.
 - Community Pulse should show comment-led video ideas before raw top comments.
@@ -406,7 +407,7 @@ Main responsibilities:
 5. Fetch recent comments when scopes allow it.
 6. Fetch YouTube Analytics reports.
 7. Fetch crypto/news RSS feeds.
-8. Split news into India, regulation, and market/global groups.
+8. Split news into India, regulation, market/global, and Hot Narrative groups.
 9. Build market intelligence and news radar inputs.
 10. Read shared board memory from Supabase when Supabase secrets are present.
 11. Build a blocked-topic list from active planner cards, saved radar, dismissed ideas, and recent CoinLyte uploads.
@@ -663,7 +664,7 @@ Then browser-test:
 - Do not turn Sync Board into a full YouTube/news/Claude refresh.
 - Source links must open in a new tab.
 - Planner cards created from intelligence must keep source link and research brief.
-- News Radar must remain source-first and scannable. It can save for future review or add directly to Planner, but it should not become another heavy idea board unless explicitly redesigned.
+- News Radar must remain source-first and scannable. It can save for future review or add directly to Planner, but it should not become another heavy idea board unless explicitly redesigned. The Hot Narrative lane should be visible here too because it is where fast-moving stories can be scanned before deciding whether they deserve a planner card.
 - Refresh idea generation must use board memory. Do not remove the Supabase memory read, blocked-topic prompt section, or post-Claude duplicate filter.
 - Team access changes must be checked server-side, not only hidden in the UI.
 - Team access codes must remain hashed.
