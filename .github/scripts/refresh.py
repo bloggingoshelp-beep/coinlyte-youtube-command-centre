@@ -237,7 +237,7 @@ def oembed_title(video_id):
 
 # ── News RSS ───────────────────────────────────────────────────────────────
 MAX_NEWS_AGE_DAYS = 7
-HOT_NARRATIVE_AGE_DAYS = 14
+COIN_MOMENTUM_NEWS_LIMIT = 10
 
 def _parse_pub(pub_str):
   """Parse RSS pubDate to a timezone-aware UTC datetime. Returns None on failure."""
@@ -295,6 +295,69 @@ def parse_news_rss(raw, region, max_items=6, max_age_days=MAX_NEWS_AGE_DAYS):
   except Exception as e:
     print(f"  News parse error: {e}")
   return items
+
+def fetch_top_coin_momentum(limit=30):
+  """Fetch top market-cap coins and rank by current movement, then attach fresh news."""
+  url = (
+    "https://api.coingecko.com/api/v3/coins/markets?"
+    "vs_currency=usd&order=market_cap_desc&per_page=30&page=1&sparkline=false"
+    "&price_change_percentage=24h,7d"
+  )
+  raw = safe_get(url, headers={'User-Agent': 'Mozilla/5.0 (compatible; coinlyte-command-centre/1.0)'}, timeout=12)
+  if not raw:
+    return []
+  try:
+    coins = json.loads(raw.decode('utf-8') if isinstance(raw, (bytes, bytearray)) else raw)
+  except Exception as e:
+    print(f"  coingecko parse failed: {e}")
+    return []
+
+  ranked = []
+  for coin in coins[:limit]:
+    change_24h = coin.get('price_change_percentage_24h') or 0
+    change_7d = coin.get('price_change_percentage_7d_in_currency') or 0
+    volume = coin.get('total_volume') or 0
+    rank = coin.get('market_cap_rank') or 999
+    momentum_score = abs(float(change_24h)) * 2 + abs(float(change_7d)) + min(20, float(volume or 0) / 1_000_000_000)
+    if momentum_score < 6:
+      continue
+    ranked.append({
+      'name': coin.get('name') or '',
+      'symbol': str(coin.get('symbol') or '').upper(),
+      'rank': rank,
+      'price': coin.get('current_price') or 0,
+      'change_24h': round(float(change_24h), 2),
+      'change_7d': round(float(change_7d), 2),
+      'volume': int(volume or 0),
+      'score': round(momentum_score, 1)
+    })
+
+  out = []
+  for coin in sorted(ranked, key=lambda c: c['score'], reverse=True)[:COIN_MOMENTUM_NEWS_LIMIT]:
+    query = urllib.parse.quote_plus(f"{coin['name']} {coin['symbol']} crypto news")
+    news_url = f"https://news.google.com/rss/search?q={query}&hl=en&gl=US&ceid=US:en"
+    news_raw = safe_get(news_url, headers={'User-Agent': 'Mozilla/5.0 (compatible; newsbot/1.0)'}, timeout=10)
+    articles = parse_news_rss(news_raw, 'Coin Momentum', max_items=2, max_age_days=MAX_NEWS_AGE_DAYS) if news_raw else []
+    article = articles[0] if articles else {}
+    direction = 'up' if coin['change_24h'] >= 0 else 'down'
+    headline = article.get('title') or f"{coin['name']} momentum watch: {coin['change_24h']}% in 24h"
+    out.append({
+      'title': headline[:120],
+      'url': article.get('url') or '',
+      'pub': article.get('pub') or '',
+      'age_days': article.get('age_days', 0),
+      'region': 'Coin Momentum',
+      'coin': coin['name'],
+      'symbol': coin['symbol'],
+      'rank': coin['rank'],
+      'price': coin['price'],
+      'change_24h': coin['change_24h'],
+      'change_7d': coin['change_7d'],
+      'volume': coin['volume'],
+      'momentum_score': coin['score'],
+      'direction': direction
+    })
+  return out
 
 # ═══════════════════════════════════════════════════════════════════════════
 # STEP 1: OAuth token
@@ -611,19 +674,13 @@ NEWS_FEEDS = [
   ('altcoins',      'https://news.google.com/rss/search?q=altcoin+crypto+bull+run+top+coins+2026&hl=en&gl=US&ceid=US:en', 'Market'),
   ('ai_crypto',     'https://news.google.com/rss/search?q=AI+crypto+token+artificial+intelligence+blockchain+2026&hl=en&gl=US&ceid=US:en', 'Market'),
   ('rwa',           'https://news.google.com/rss/search?q=RWA+real+world+assets+tokenization+crypto+2026&hl=en&gl=US&ceid=US:en', 'Market'),
-  # Hot narrative radar: fast-moving stories that may not fit normal coin/regulation feeds.
-  ('hot_hyperliquid', 'https://news.google.com/rss/search?q=Hyperliquid+HYPE+SpaceX+pre-IPO+tokenized+stocks+crypto&hl=en&gl=US&ceid=US:en', 'Hot'),
-  ('hot_tokenized_stocks', 'https://news.google.com/rss/search?q=tokenized+stocks+pre-IPO+perpetuals+crypto+xStocks+RWA&hl=en&gl=US&ceid=US:en', 'Hot'),
-  ('hot_top_coins', 'https://news.google.com/rss/search?q=bitcoin+ethereum+solana+xrp+bnb+dogecoin+cardano+sui+hyperliquid+crypto+breaking+news&hl=en&gl=US&ceid=US:en', 'Hot'),
-  ('hot_market_structure', 'https://news.google.com/rss/search?q=crypto+exchange+perpetuals+liquidation+whale+ETF+tokenization+India+investors&hl=en&gl=US&ceid=US:en', 'Hot'),
 ]
 
 all_news = {}
 for key_name, url, region in NEWS_FEEDS:
   raw = safe_get(url, headers={'User-Agent': 'Mozilla/5.0 (compatible; newsbot/1.0)'}, timeout=12)
   if raw:
-    max_age = HOT_NARRATIVE_AGE_DAYS if region == 'Hot' else MAX_NEWS_AGE_DAYS
-    items = parse_news_rss(raw, region, max_items=5, max_age_days=max_age)
+    items = parse_news_rss(raw, region, max_items=5, max_age_days=MAX_NEWS_AGE_DAYS)
     all_news[key_name] = items
     print(f"  {key_name}: {len(items)} articles")
   else:
@@ -668,16 +725,13 @@ market_news = dedup(
   all_news.get('rwa',[])
 )[:20]
 
-hot_news = dedup(
-  all_news.get('hot_hyperliquid',[]) + all_news.get('hot_tokenized_stocks',[]) +
-  all_news.get('hot_top_coins',[]) + all_news.get('hot_market_structure',[])
-)[:15]
+coin_momentum_news = dedup(fetch_top_coin_momentum())[:10]
 
 news_intelligence = {
   'india': india_news, 'regulation': reg_news,
-  'market': market_news, 'hot': hot_news, 'fetchedAt': TODAY
+  'market': market_news, 'coins': coin_momentum_news, 'fetchedAt': TODAY
 }
-print(f"News: India={len(india_news)} | Reg={len(reg_news)} | Market={len(market_news)} | Hot={len(hot_news)} | Total={len(india_news)+len(reg_news)+len(market_news)+len(hot_news)}")
+print(f"News: India={len(india_news)} | Reg={len(reg_news)} | Market={len(market_news)} | Coins={len(coin_momentum_news)} | Total={len(india_news)+len(reg_news)+len(market_news)+len(coin_momentum_news)}")
 
 # ═══════════════════════════════════════════════════════════════════════════
 # STEP 6.5: Video Performance Analysis — find underperformers + top formats
@@ -741,7 +795,7 @@ if ANTHROPIC_KEY:
     india_hdls  = [n['title'] for n in india_news[:8]]
     reg_hdls    = [n['title'] for n in reg_news[:5]]
     mkt_hdls    = [n['title'] for n in market_news[:10]]
-    hot_hdls    = [n['title'] for n in hot_news[:10]]
+    coin_hdls   = [f"{n.get('coin','Coin')} ({n.get('symbol','')}) {n.get('change_24h',0)}% 24h — {n['title']}" for n in coin_momentum_news[:10]]
     comment_str = ', '.join([t['topic'] for t in themes[:8] if t['count'] > 0] or [t['topic'] for t in themes[:5]])
     top_vids_str = ', '.join([v for v in video_titles.values()][:5]) if video_titles else 'Security guides, XRP explained, Exchange guides'
     board_memory = fetch_board_memory()
@@ -831,8 +885,8 @@ US regulation (GENIUS Act / Clarity Act):
 Global market (Bitcoin / Ethereum / XRP):
 {chr(10).join(f'- {t}' for t in mkt_hdls) if mkt_hdls else '- No live news'}
 
-Hot narrative radar (top coins, Hyperliquid/HYPE, SpaceX pre-IPO, tokenized stocks, perps, RWA):
-{chr(10).join(f'- {t}' for t in hot_hdls) if hot_hdls else '- No live hot narratives'}
+Top 30 coin momentum radar (CoinGecko market-cap top 30 + 7-day news only):
+{chr(10).join(f'- {t}' for t in coin_hdls) if coin_hdls else '- No top-30 coin momentum news this refresh'}
 
 ═══ YOUR TASK ═══
 Generate exactly 20 candidate video ideas for CoinLyte. The app will keep the best non-duplicate 15 after memory filtering. Rules:
@@ -846,7 +900,7 @@ Generate exactly 20 candidate video ideas for CoinLyte. The app will keep the be
 
 Priority distribution for candidates: 5 urgent (news-driven, post this week) + 8 high (competitor gaps) + 7 medium (evergreen/community asks)
 
-Sources for each idea MUST be one of: "Coin Bureau", "Cyber Scrilla", "India News", "Regulation News", "Market News", "Community Comments", "Analytics Data", "Topic Pivot"
+Sources for each idea MUST be one of: "Coin Bureau", "Cyber Scrilla", "India News", "Regulation News", "Market News", "Coin Momentum", "Community Comments", "Analytics Data", "Topic Pivot"
 
 For each idea return a JSON object with EXACTLY these fields:
 - "title": Hindi/English mix, emoji, India angle, ₹ or % when possible (max 80 chars)
@@ -920,7 +974,7 @@ status_payload = {
     'analytics': bool(analytics),
     'comments': len(all_comments),
     'competitors': len(coin_bureau_vids) + len(cyberscrilla_vids) + len(bankless_vids),
-    'news': len(india_news) + len(reg_news) + len(market_news) + len(hot_news),
+    'news': len(india_news) + len(reg_news) + len(market_news) + len(coin_momentum_news),
     'ideas': len(video_ideas)
   }
 }
@@ -930,4 +984,4 @@ with open('assets/refresh-status.json','w',encoding='utf-8') as f:
 print(f"Wrote assets/live-data.js ({len(payload):,} chars)")
 print(f"Wrote assets/refresh-status.json")
 
-print(f"\n✅ Done: {TODAY} | CoinLyte:{len(coinlyte_vids)} | CB:{len(coin_bureau_vids)} | CS:{len(cyberscrilla_vids)} | Comments:{len(all_comments)} | News:India={len(india_news)},Reg={len(reg_news)},Mkt={len(market_news)},Hot={len(hot_news)} | Ideas:{len(video_ideas)}")
+print(f"\n✅ Done: {TODAY} | CoinLyte:{len(coinlyte_vids)} | CB:{len(coin_bureau_vids)} | CS:{len(cyberscrilla_vids)} | Comments:{len(all_comments)} | News:India={len(india_news)},Reg={len(reg_news)},Mkt={len(market_news)},Coins={len(coin_momentum_news)} | Ideas:{len(video_ideas)}")

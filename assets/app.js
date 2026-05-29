@@ -133,7 +133,7 @@
   function applyLiveData(target, live) {
     if (!live) {
       target.liveStatus = "seed";
-      target.market = { india: [], regulation: [], market: [], hot: [] };
+      target.market = { india: [], regulation: [], market: [], coins: [] };
       return;
     }
     target.liveStatus = "live";
@@ -182,7 +182,7 @@
       }));
     }
     target.commentThemes = Array.isArray(live.commentThemes) ? live.commentThemes : [];
-    target.market = live.news || { india: [], regulation: [], market: [], hot: [] };
+    target.market = live.news || { india: [], regulation: [], market: [], coins: [] };
     target.videoPerformance = Array.isArray(live.videoPerformance) ? live.videoPerformance : [];
     if (live.analytics) applyLiveAnalytics(target, live.analytics);
     target.bestHours = buildBestHours(live.analytics?.hourly, target.bestHours);
@@ -410,7 +410,7 @@
     return (items || []).map((item) => withId({
       id: item.id,
       title: item.title || "Saved news source",
-      bucket: item.bucket || item.source || "News Radar",
+      bucket: item.bucket || item.source || "Source Radar",
       category: item.category || "Market",
       sourceUrl: item.sourceUrl || item.url || "",
       age: item.age || "",
@@ -845,7 +845,7 @@
       ["India Policy", "india", market.india || [], "🇮🇳", "red"],
       ["US Regulation", "regulation", market.regulation || [], "🧾", "gold"],
       ["Global Market", "market", market.market || [], "📈", "blue"],
-      ["Hot Narrative", "hot", market.hot || [], "🔥", "violet"]
+      ["Top 30 Coin Momentum", "coins", market.coins || market.hot || [], "🚀", "violet"]
     ];
     return buckets.flatMap(([bucket, key, items, emoji, tone]) => (items || []).slice(0, 10).map((item) => {
       const age = sourceAge(item);
@@ -861,7 +861,7 @@
         idea: {
           title: `${emoji} ${title}`,
           category,
-          urgency: bucket === "India Policy" ? "Urgent" : ageUrgency(age),
+          urgency: bucket === "India Policy" || key === "coins" ? "Urgent" : ageUrgency(age),
           signal: "news_trend",
           source: bucket,
           sourceUrl: item.url || item.link || "",
@@ -1522,7 +1522,6 @@
     return [
       ["health", "Channel Health"],
       ["market", "Market Intel"],
-      ["news", "News Radar"],
       ["competitors", "Competitor Intel"],
       ["community", "Community Pulse"],
       ["ideas", "Video Ideas"],
@@ -1531,7 +1530,6 @@
   }
   function intelligenceContent(an) {
     if (state.intelligenceTab === "market") return intelligenceMarketContent();
-    if (state.intelligenceTab === "news") return intelligenceNewsRadarContent();
     if (state.intelligenceTab === "competitors") return intelligenceCompetitorContent();
     if (state.intelligenceTab === "community") return intelligenceCommunityContent();
     if (state.intelligenceTab === "ideas") return intelligenceIdeasContent();
@@ -1581,17 +1579,18 @@
     const urgentCount = signals.filter((signal) => normalizePriority(signal.idea.urgency) === "urgent").length;
     return `<section class="panel market-intel-panel">
       <div class="panel-head">
-        <div><h3>📰 Market Intelligence — Trending Topics Worth Covering</h3><div class="panel-sub">India policy · US regulation · global macro · every card carries source age and Indian angle.</div></div>
+        <div><h3>📰 Market Intelligence — Trending Topics Worth Covering</h3><div class="panel-sub">One source board: India policy · US regulation · global macro · top-30 coin momentum. Fresh 7-day window only.</div></div>
         <span class="tag green">🟢 Live · ${urgentCount} urgent</span>
       </div>
       ${marketLane("🔴 Urgent — India Policy News", "RBI, tax, exchanges, India investor risk. Cover first when it affects Indian viewers directly.", "india", signals)}
       ${marketLane("🟣 US Policy / Regulation", "GENIUS, CLARITY, SEC/CFTC, stablecoin law. Convert global regulation into India-safe decisions.", "regulation", signals)}
       ${marketLane("🌐 Global Market News", "Bitcoin, ETH, macro, institutions, RWA, AI crypto. Use when it can become a simple Hindi story.", "market", signals)}
-      ${marketLane("🔥 Hot Narrative Radar", "Top coins, Hyperliquid/HYPE, SpaceX pre-IPO, tokenized stocks, perps, RWA, liquidations, and fast-moving story clusters.", "hot", signals)}
+      ${marketLane("🚀 Top 30 Coin Momentum", "CoinGecko top-30 movers plus fresh news. Catch token-specific trains before the Hindi market crowds them.", "coins", signals)}
+      ${marketSourceRadar()}
       ${signals.length ? `<div class="market-monitor">
         <h4>📡 Monitor These Sources Daily</h4>
         <div class="card-actions">
-          ${["CoinDesk", "CoinTelegraph", "ET Markets Crypto", "Google News India", "The Block", "RBI Press", "Hyperliquid/HYPE", "Tokenized Stocks"].map((source) => `<span class="ghost-btn source-chip">${source} ↗</span>`).join("")}
+          ${["CoinDesk", "CoinTelegraph", "ET Markets Crypto", "Google News India", "The Block", "RBI Press", "CoinGecko Top 30", "Token News"].map((source) => `<span class="ghost-btn source-chip">${source} ↗</span>`).join("")}
         </div>
       </div>` : `<div class="empty">No market signals available. Refresh live data to fetch news.</div>`}
     </section>
@@ -1601,13 +1600,13 @@
         ${intelligenceRule("teal", "India Gap", "Covered globally but not yet in Hindi. Act within 1-2 weeks for first-mover advantage.")}
         ${intelligenceRule("gold", "Speed Rule", "India Policy and US Regulation cool fastest. If it has source age Today or 1 day ago, decide now.")}
         ${intelligenceRule("violet", "Global Market Filter", "Only add global market stories if they connect to rupee impact, exchange safety, or portfolio decisions.")}
-        ${intelligenceRule("red", "Hot Narrative Rule", "Treat Hot Narrative as a watchlist. Save or open source first; add to planner only when the Indian angle is concrete.")}
+        ${intelligenceRule("red", "Coin Momentum Rule", "A top-30 coin deserves attention only when price/volume movement and a fresh source point to the same story.")}
       </div>
     </section>`;
   }
   function marketLane(title, subtitle, key, signals) {
     const laneSignals = signals.map((signal, index) => ({ signal, index })).filter(({ signal }) => signal.key === key);
-    const tone = key === "india" ? "red" : key === "regulation" ? "gold" : key === "hot" ? "violet" : "blue";
+    const tone = key === "india" ? "red" : key === "regulation" ? "gold" : key === "coins" ? "violet" : "blue";
     return `<div class="market-lane market-lane-${tone}">
       <div class="market-lane-head"><div><h4>${escapeHTML(title)}</h4><p>${escapeHTML(subtitle)}</p></div><span>${laneSignals.length}</span></div>
       <div class="market-signal-grid">
@@ -1634,6 +1633,7 @@
       hotWords.forEach((word) => { if (lower.includes(word)) score += 4; });
       if (/india|rbi|rupee|inr|tax|exchange/.test(lower)) score += 10;
       if (/hyperliquid|hype|spacex|pre[- ]?ipo|tokenized stock|xstock|perpetual|liquidation|whale/.test(lower)) score += 14;
+      if (signal.key === "coins") score += 18;
       return { signal, index, score };
     }).filter(({ signal }) => {
       const key = String(signal.item?.title || signal.idea?.title || "").toLowerCase();
@@ -1645,26 +1645,27 @@
   function marketSourceType(key) {
     if (key === "india") return "India Policy";
     if (key === "regulation") return "US Regulation";
-    if (key === "hot") return "Hot Narrative";
+    if (key === "coins") return "Top 30 Coin Momentum";
+    if (key === "hot") return "Top 30 Coin Momentum";
     return "Global Macro";
   }
   function marketLiveUse(key) {
     if (key === "india") return "Use this when explaining tax, exchange safety, RBI risk, or rupee impact for Indian viewers.";
     if (key === "regulation") return "Use this as proof while explaining how US crypto rules can affect Indian exchange access and token risk.";
-    if (key === "hot") return "Use this to spot fast-moving narratives before they become crowded: top coins, Hyperliquid/HYPE, SpaceX pre-IPO, tokenized stocks, perps, RWA, or liquidation shocks.";
+    if (key === "coins" || key === "hot") return "Use this when a top-30 coin is moving and fresh news explains why. Make it a simple India-focused momentum/risk story.";
     return "Use this as macro context for weekly market direction, portfolio risk, and simple Hindi explainers.";
   }
-  function intelligenceNewsRadarContent() {
+  function marketSourceRadar() {
     const radar = newsRadarSignals();
     const counts = radar.reduce((acc, item) => {
       acc[item.signal.key] = (acc[item.signal.key] || 0) + 1;
       return acc;
     }, {});
-    return `<section class="panel news-radar-panel">
+    return `<section class="panel news-radar-panel embedded-radar">
       <div class="panel-head">
         <div>
-          <h3>🛰️ News Radar — Top Sources To Scan</h3>
-          <div class="panel-sub">No video ideas here. This is your source board for live streams, weekly audience shares, and quick team review.</div>
+          <h3>🛰️ Source Radar — Best 10 Links From Market Intel</h3>
+          <div class="panel-sub">Merged here to avoid duplicate tabs. Save for later, open source, dismiss noise, or add directly to Planner.</div>
         </div>
         <span class="tag green">Top ${radar.length}</span>
       </div>
@@ -1672,18 +1673,10 @@
         <span>🇮🇳 India Policy ${counts.india || 0}</span>
         <span>🧾 US Regulation ${counts.regulation || 0}</span>
         <span>📈 Global Market ${counts.market || 0}</span>
-        <span>🔥 Hot Narrative ${counts.hot || 0}</span>
+        <span>🚀 Top 30 Coins ${counts.coins || counts.hot || 0}</span>
       </div>
       <div class="news-radar-grid">
         ${radar.map((item, rank) => newsRadarCard(item, rank)).join("") || `<div class="empty">No fresh radar sources in this refresh. Run Refresh Live Data to fetch news.</div>`}
-      </div>
-    </section>
-    <section class="panel reading-guide">
-      <div class="panel-head"><div><h3>How To Use News Radar</h3><div class="panel-sub">Treat this like a source-ready control room, not a planner queue.</div></div></div>
-      <div class="rule-stack">
-        ${intelligenceRule("teal", "Open Source", "Use the source link during live recording or send it to the team for audience posts.")}
-        ${intelligenceRule("gold", "Dismiss Noise", "Dismiss stories that are not useful for Indian viewers or are already covered.")}
-        ${intelligenceRule("violet", "Weekly Scan", "Pick the strongest 3-5 links for a weekly crypto market update.")}
       </div>
     </section>`;
   }
@@ -1737,7 +1730,7 @@
     state.savedRadar.unshift(item);
     state.savedRadar = normalizeSavedRadar(state.savedRadar).slice(0, 60);
     saveSavedRadar();
-    toast("Saved to Planner News Radar.", { label: "Open Saved Radar", run: () => {
+    toast("Saved to Planner Source Radar.", { label: "Open Saved Radar", run: () => {
       state.plannerTab = "radar";
       setView("planner");
     } });
@@ -1855,6 +1848,7 @@
       <div class="market-kicker">${escapeHTML(signal.emoji)} ${escapeHTML(signal.bucket)} · ${escapeHTML(idea.category)}</div>
       <h4>${escapeHTML(idea.title)}</h4>
       <p>💡 Angle: ${escapeHTML(newsAngle(signal.item, signal.bucket))}</p>
+      ${signal.key === "coins" ? coinMomentumStrip(signal.item) : ""}
       <div class="card-actions">
         <span class="badge ${priority === "urgent" ? "red" : priority === "high" ? "amber" : "navy"}">${priority === "urgent" ? "🔴 Urgent" : priority === "high" ? "🟡 High" : "⚪ Medium"}</span>
         <span class="badge teal">🇮🇳 India angle</span>
@@ -1865,6 +1859,14 @@
         <button class="ghost-btn compact-btn dismiss-btn" data-dismiss-market="${index}" type="button">Dismiss</button>
       </div>
     </article>`;
+  }
+  function coinMomentumStrip(item = {}) {
+    const coin = item.coin || item.symbol || "Top-30 coin";
+    const symbol = item.symbol ? ` (${item.symbol})` : "";
+    const d24 = Number(item.change_24h || 0);
+    const d7 = Number(item.change_7d || 0);
+    const volume = Number(item.volume || 0);
+    return `<div class="live-use-box coin-momentum-strip">🚀 ${escapeHTML(coin)}${escapeHTML(symbol)} · rank #${escapeHTML(item.rank || "-")} · 24h ${d24 >= 0 ? "+" : ""}${d24}% · 7d ${d7 >= 0 ? "+" : ""}${d7}% · vol ${compact(volume)}</div>`;
   }
   function bindIntelligenceActions() {
     $all("[data-news-title]").forEach((btn) => btn.addEventListener("click", () => addIdeaToPipeline({
@@ -2096,7 +2098,7 @@
       ...(market.india || []).map((item) => ({ ...item, bucket: "India Policy", weight: 10 })),
       ...(market.regulation || []).map((item) => ({ ...item, bucket: "US Regulation", weight: 8 })),
       ...(market.market || []).map((item) => ({ ...item, bucket: "Global Market", weight: 6 })),
-      ...(market.hot || []).map((item) => ({ ...item, bucket: "Hot Narrative", weight: 9 }))
+      ...(market.coins || market.hot || []).map((item) => ({ ...item, bucket: "Top 30 Coin Momentum", weight: 9 }))
     ].slice(0, 30);
     $("#market").innerHTML = `
       <div class="hero-band">
@@ -2133,6 +2135,7 @@
         ${newsPanel("India Policy", market.india || [], "India investor angle, RBI, tax, exchanges")}
         ${newsPanel("US Regulation", market.regulation || [], "GENIUS Act, CLARITY Act, ETF, SEC/CFTC")}
         ${newsPanel("Global Market", market.market || [], "Bitcoin, ETH, XRP, stablecoins, RWA, AI crypto")}
+        ${newsPanel("Top 30 Coin Momentum", market.coins || market.hot || [], "CoinGecko top-30 movers with fresh token-specific sources")}
       </div>
       <div class="grid cols-2">
         <div class="panel">
@@ -2180,7 +2183,7 @@
   function newsAngle(item, bucket) {
     if (bucket === "India Policy") return "Localize this for Indian investors: tax, exchange access, RBI risk, or rupee impact.";
     if (bucket === "US Regulation") return "Explain why a US decision changes liquidity, exchange access, or token risk for India.";
-    if (bucket === "Hot Narrative") return "Check if this is a fast-moving narrative worth explaining before Hindi crypto channels catch up.";
+    if (bucket === "Top 30 Coin Momentum" || bucket === "Hot Narrative") return "Check if top-30 coin movement and fresh news combine into a timely India-focused opportunity or risk story.";
     return "Use only if it can become a simple Hindi story with a rupee amount, risk, or portfolio decision.";
   }
   function ideaCard(idea) {
@@ -2450,7 +2453,7 @@
     return `<section class="panel saved-radar-panel">
       <div class="panel-head">
         <div>
-          <h3>Saved News Radar</h3>
+          <h3>Saved Source Radar</h3>
           <div class="panel-sub">News links you want to keep even after the next live refresh changes the radar feed.</div>
         </div>
         <div class="card-actions">
@@ -2464,10 +2467,10 @@
         <span>India Policy ${items.filter((item) => item.bucket === "India Policy").length}</span>
         <span>US Regulation ${items.filter((item) => item.bucket === "US Regulation").length}</span>
         <span>Global Macro ${items.filter((item) => item.bucket === "Global Macro").length}</span>
-        <span>Hot Narrative ${items.filter((item) => item.bucket === "Hot Narrative").length}</span>
+        <span>Top 30 Coins ${items.filter((item) => item.bucket === "Top 30 Coin Momentum" || item.bucket === "Hot Narrative").length}</span>
       </div>
       <div class="saved-radar-grid">
-        ${items.map(savedRadarCard).join("") || `<div class="empty">No saved news yet. Go to Channel Intelligence → News Radar and click Save Radar on links worth keeping.</div>`}
+        ${items.map(savedRadarCard).join("") || `<div class="empty">No saved news yet. Go to Channel Intelligence → Market Intel and click Save Radar on links worth keeping.</div>`}
       </div>
     </section>`;
   }
@@ -2478,7 +2481,7 @@
         <span class="news-radar-rank">🗞️</span>
         <span class="source-age high">${escapeHTML(item.age || "saved")}</span>
       </div>
-      <div class="market-kicker">${escapeHTML(item.bucket || "News Radar")} · saved ${escapeHTML(savedDate || "recently")}</div>
+      <div class="market-kicker">${escapeHTML(item.bucket || "Source Radar")} · saved ${escapeHTML(savedDate || "recently")}</div>
       <h4>${escapeHTML(item.title)}</h4>
       ${item.angle ? `<p>${escapeHTML(item.angle)}</p>` : ""}
       ${item.liveUse ? `<div class="live-use-box">🎙️ ${escapeHTML(item.liveUse)}</div>` : ""}
@@ -2492,7 +2495,7 @@
   function bindPlannerRadar() {
     $("[data-sync-scope]")?.addEventListener("click", (event) => syncSharedBoard(event.currentTarget.dataset.syncScope));
     $("[data-open-intel-radar]")?.addEventListener("click", () => {
-      state.intelligenceTab = "news";
+      state.intelligenceTab = "market";
       setView("intelligence");
     });
     $("[data-clear-saved-radar]")?.addEventListener("click", () => {

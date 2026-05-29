@@ -76,7 +76,6 @@ Channel Intelligence is the source of market and audience insight. It includes:
 
 - Channel health.
 - Market Intelligence.
-- News Radar.
 - Competitor Intelligence.
 - Community Pulse.
 - Video Ideas.
@@ -85,8 +84,9 @@ Channel Intelligence is the source of market and audience insight. It includes:
 Important behavior:
 
 - Market Intelligence can create planner-ready ideas.
-- Market Intelligence has four lanes: India Policy, US Regulation, Global Market, and Hot Narrative. Hot Narrative is for fast-moving clusters such as top-coin breakouts, Hyperliquid/HYPE, SpaceX pre-IPO or tokenized stock stories, perpetuals, RWA, liquidations, and exchange/market-structure shifts that may not fit the normal news buckets. Normal news keeps a 7-day window; Hot Narrative keeps a 14-day window because those stories can stay actionable longer.
-- News Radar is source-first. It is for scanning important crypto news, opening source links, dismissing noise, saving links to Content Planner -> Saved Radar, or sending a source directly into Planner when Kirtish wants to act immediately. Do not turn News Radar into another video-idea generator unless Kirtish explicitly asks.
+- Market Intelligence has four lanes: India Policy, US Regulation, Global Market, and Top 30 Coin Momentum. All lanes use the 7-day freshness window.
+- Source Radar now lives inside Market Intelligence instead of being a separate tab. It is for scanning the best 10 source links, opening source links, dismissing noise, saving links to Content Planner -> Saved Radar, or sending a source directly into Planner when Kirtish wants to act immediately.
+- Top 30 Coin Momentum is coin-specific. The refresh script pulls CoinGecko top-30 market-cap coins, ranks current movers by 24h/7d movement and volume, then attaches fresh Google News sources. This is where HYPE/Hyperliquid-style momentum, token-specific catalysts, exchange volume shocks, and major top-30 coin narratives should appear.
 - Competitor Intelligence should show competitor uploads and CoinLyte-fit ideas inspired by them.
 - Community Pulse should show comment-led video ideas before raw top comments.
 - Community Pulse must not learn from obvious scam reply farms. The refresh script filters scam text, phone/contact bait, and fake author patterns such as usernames beginning with `Oliv`. The frontend repeats the same safety filter as a fallback for older cached `live-data.js`.
@@ -138,7 +138,7 @@ Editor reference sources are separate from the locked research brief. When a use
 
 ### Saved Radar
 
-Saved Radar stores source-first news links that should survive the next refresh. It is fed from Channel Intelligence -> News Radar.
+Saved Radar stores source-first news links that should survive the next refresh. It is fed from Channel Intelligence -> Market Intel -> Source Radar.
 
 Important behavior:
 
@@ -411,8 +411,8 @@ Main responsibilities:
 5. Fetch recent comments when scopes allow it.
 6. Fetch YouTube Analytics reports.
 7. Fetch crypto/news RSS feeds.
-8. Split news into India, regulation, market/global, and Hot Narrative groups.
-9. Build market intelligence and news radar inputs.
+8. Split news into India, regulation, market/global, and Top 30 Coin Momentum groups.
+9. Build market intelligence and the embedded source radar inputs.
 10. Read shared board memory from Supabase when Supabase secrets are present.
 11. Build a blocked-topic list from active planner cards, saved radar, dismissed ideas, and recent CoinLyte uploads.
 12. Call Claude with channel, audience, comment, competitor, analytics, news context, and blocked-topic memory. Claude is asked for 20 candidates so the app can keep the strongest 15 after filtering.
@@ -647,7 +647,7 @@ Then browser-test:
 - Team login.
 - Command screen.
 - Channel Intelligence tabs.
-- News Radar save/add planner/dismiss/source links.
+- Market Intel Source Radar save/add planner/dismiss/source links.
 - Add idea to Planner.
 - Planner edit modal.
 - Saved Radar tab.
@@ -668,7 +668,8 @@ Then browser-test:
 - Do not turn Sync Board into a full YouTube/news/Claude refresh.
 - Source links must open in a new tab.
 - Planner cards created from intelligence must keep source link and research brief.
-- News Radar must remain source-first and scannable. It can save for future review or add directly to Planner, but it should not become another heavy idea board unless explicitly redesigned. The Hot Narrative lane should be visible here too because it is where fast-moving stories can be scanned before deciding whether they deserve a planner card.
+- Market Intel Source Radar must remain source-first and scannable. It can save for future review or add directly to Planner, but it should not become another heavy idea board unless explicitly redesigned.
+- Top 30 Coin Momentum must stay tied to top-market-cap coins and the 7-day source window. Do not reintroduce broad old hot-news exceptions unless Kirtish explicitly asks.
 - Refresh idea generation must use board memory. Do not remove the Supabase memory read, blocked-topic prompt section, or post-Claude duplicate filter.
 - Team access changes must be checked server-side, not only hidden in the UI.
 - Team access codes must remain hashed.

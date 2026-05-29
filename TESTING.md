@@ -10,7 +10,7 @@ Verified in this pass:
 
 - JavaScript syntax for the frontend and all Vercel API routes.
 - Python syntax for `.github/scripts/refresh.py`.
-- Static smoke suite with security, refresh, Supabase, notification, planner, saved radar, duplicate-filter, scam-filter, and Hot Narrative guards.
+- Static smoke suite with security, refresh, Supabase, notification, planner, saved radar, duplicate-filter, scam-filter, and Top 30 Coin Momentum guards.
 - Auth helpers: signed session cookie round trip, team access-code hash verification, and wrong-code rejection.
 - Browser smoke: login screen, all top-level nav areas, Channel Intelligence subtabs, Content Planner board/calendar/saved radar, planner modal structure, Brand Deals board/modal, Team Access modal, Refresh screen, and notification drawer.
 
@@ -58,10 +58,10 @@ npm test
 
 ## Intelligence
 
-- Market Intel shows India policy, US regulation, global market, and Hot Narrative sections.
-- Hot Narrative cards cover fast-moving source clusters such as top coins, Hyperliquid/HYPE, SpaceX pre-IPO, tokenized stocks, perps, RWA, liquidations, and market-structure shifts. This lane intentionally accepts stories up to 14 days old so still-burning narratives do not disappear too early.
-- News Radar shows source-only cards with source, save, add-planner, dismiss actions, and the Hot Narrative count.
-- Saved News Radar links appear under Content Planner -> Saved Radar and survive Sync Planner.
+- Market Intel shows India policy, US regulation, global market, Top 30 Coin Momentum, and embedded Source Radar sections.
+- Top 30 Coin Momentum uses CoinGecko top-market-cap movers plus fresh 7-day Google News sources.
+- Source Radar shows source-only cards inside Market Intel with source, save, add-planner, and dismiss actions.
+- Saved Source Radar links appear under Content Planner -> Saved Radar and survive Sync Planner.
 - Competitor Intel shows competitor videos and generated CoinLyte-fit ideas.
 - Community Pulse shows comment-led video ideas before raw top comments.
 - Community Pulse excludes obvious scam/reply-farm comments, including fake author names that start with `Oliv`, contact-me bait, Telegram/WhatsApp bait, and phone-number spam.

@@ -116,14 +116,14 @@ if (!files.app.includes("Unknown owner") || !files.app.includes("👤 Unassigned
 if (!files.app.includes("pickCommandCard") || !files.app.includes("Skip Today") || !files.app.includes("commandDecisionBasis")) {
   throw new Error("Command owner decision must be ranked, explainable, and dismissible.");
 }
-if (!files.app.includes("data-add-radar-planner") || !files.app.includes("data-add-saved-radar") || !files.app.includes("data-dismiss-saved-radar")) {
-  throw new Error("News Radar and Saved Radar must support direct planner conversion and saved radar dismissal.");
+if (!files.app.includes("Source Radar") || !files.app.includes("data-add-radar-planner") || !files.app.includes("data-add-saved-radar") || !files.app.includes("data-dismiss-saved-radar")) {
+  throw new Error("Market Source Radar and Saved Radar must support direct planner conversion and saved radar dismissal.");
 }
-if (!files.app.includes("Hot Narrative") || !files.app.includes("market.hot") || !files.refreshScript.includes("hot_hyperliquid")) {
-  throw new Error("Channel Intelligence must include the Hot Narrative lane and refresh feeds.");
+if (!files.app.includes("Top 30 Coin Momentum") || !files.app.includes("market.coins") || !files.refreshScript.includes("fetch_top_coin_momentum")) {
+  throw new Error("Channel Intelligence must include the Top 30 Coin Momentum lane and refresh feed.");
 }
-if (!files.refreshScript.includes("Hyperliquid+HYPE+SpaceX+pre-IPO") || !files.refreshScript.includes("hot_news") || !files.refreshScript.includes("HOT_NARRATIVE_AGE_DAYS")) {
-  throw new Error("Refresh must explicitly monitor Hyperliquid/HYPE, SpaceX pre-IPO, tokenized stock narratives.");
+if (!files.refreshScript.includes("api.coingecko.com/api/v3/coins/markets") || !files.refreshScript.includes("MAX_NEWS_AGE_DAYS = 7") || !files.refreshScript.includes("Coin Momentum")) {
+  throw new Error("Refresh must monitor top-30 coin momentum with a 7-day source window.");
 }
 if (files.app.includes("data-remove-saved-radar")) {
   throw new Error("Saved Radar should use Dismiss wording/actions instead of Remove.");
