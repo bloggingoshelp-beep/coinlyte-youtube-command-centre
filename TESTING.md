@@ -2,16 +2,34 @@
 
 Use this checklist before pushing or deploying.
 
+## Latest Handover QA Pass
+
+Last full local handover QA: May 29, 2026.
+
+Verified in this pass:
+
+- JavaScript syntax for the frontend and all Vercel API routes.
+- Python syntax for `.github/scripts/refresh.py`.
+- Static smoke suite with security, refresh, Supabase, notification, planner, saved radar, duplicate-filter, scam-filter, and Hot Narrative guards.
+- Auth helpers: signed session cookie round trip, team access-code hash verification, and wrong-code rejection.
+- Browser smoke: login screen, all top-level nav areas, Channel Intelligence subtabs, Content Planner board/calendar/saved radar, planner modal structure, Brand Deals board/modal, Team Access modal, Refresh screen, and notification drawer.
+
 ## Automated
 
 ```bash
 node --check assets/app.js
+node --check api/auth.js
+node --check api/board.js
+node --check api/db.js
+node --check api/login.js
+node --check api/logout.js
+node --check api/me.js
+node --check api/notify.js
 node --check api/refresh.js
 node --check api/refresh-status.js
-node --check api/notify.js
-node --check api/board.js
+node --check api/static.js
 node --check api/team-user.js
-node --check api/login.js
+PYTHONPYCACHEPREFIX=/private/tmp/coinlyte-pycache python3 -m py_compile .github/scripts/refresh.py
 npm test
 ```
 

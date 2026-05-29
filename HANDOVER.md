@@ -35,6 +35,10 @@ If a future change does not help these questions, be careful before adding it.
 
 This is intentionally simple. The app should remain easy for AI tools to understand and modify.
 
+## Latest Handover Status
+
+Final local handover QA was run on May 29, 2026. The pass covered frontend syntax, all Vercel API route syntax, refresh-script Python syntax, static smoke tests, auth helper checks, and browser navigation through the main app areas. See `TESTING.md` for the exact checklist and commands.
+
 ## Main User Experience
 
 ### Login

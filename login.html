@@ -64,7 +64,8 @@
       p { color: #475569; line-height: 1.6; }
       form { margin-top: 24px; }
       label { display: block; margin-bottom: 8px; font-weight: 750; }
-      .row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; }
+      .row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end; }
+      .field { min-width: 0; }
       input {
         min-width: 0;
         padding: 12px 13px;
@@ -94,12 +95,17 @@
       <div class="mark"><img src="/assets/brand/coinlyte-logo.png" alt="CoinLyte"></div>
       <p class="eyebrow">CoinLyte OS</p>
       <h1>Command Centre</h1>
-      <p>Private owner access for the YouTube business dashboard.</p>
+      <p>Private access for the YouTube business dashboard.</p>
       <form id="login-form" method="post" action="/api/login">
-        <label for="userId">User ID and access code</label>
         <div class="row">
-          <input id="userId" name="userId" type="text" autocomplete="username" placeholder="User ID" autofocus required>
-          <input id="code" name="code" type="password" autocomplete="current-password" required>
+          <div class="field">
+            <label for="userId">User ID</label>
+            <input id="userId" name="userId" type="text" autocomplete="username" placeholder="User ID" autofocus required>
+          </div>
+          <div class="field">
+            <label for="code">Access code</label>
+            <input id="code" name="code" type="password" autocomplete="current-password" placeholder="Access code" required>
+          </div>
           <button type="submit">Unlock</button>
         </div>
         <p id="error" class="error" role="alert"></p>
