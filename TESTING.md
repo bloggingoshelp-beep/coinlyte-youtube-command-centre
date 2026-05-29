@@ -64,6 +64,7 @@ npm test
 - Saved Source Radar links appear under Content Planner -> Saved Radar and survive Sync Planner.
 - Competitor Intel shows competitor videos and generated CoinLyte-fit ideas.
 - Community Pulse shows comment-led video ideas before raw top comments.
+- Video Ideas should remain the final combined shortlist across Market Intel, Coin Stats, Competitor Intel, Community Pulse, analytics, saved radar, dismissed ideas, existing planner cards, and recent uploads.
 - Community Pulse excludes obvious scam/reply-farm comments, including fake author names that start with `Oliv`, contact-me bait, Telegram/WhatsApp bait, and phone-number spam.
 - Add-to-Planner removes the idea from the loose idea list.
 - Dismiss hides the idea/card.

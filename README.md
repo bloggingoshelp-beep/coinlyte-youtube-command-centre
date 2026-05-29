@@ -76,6 +76,7 @@ For the detailed functional checklist, use `TESTING.md`.
 - Browser local storage: fallback/offline copy when Supabase is not configured or unavailable.
 - Saved Radar: source-first news links saved from Channel Intelligence -> Market Intel for later reading, dismissal, or direct Planner conversion.
 - Coin Stats: separate Top 30 Coin Momentum tab using CoinGecko top-market-cap movers plus fresh 7-day news, used to catch coin-specific momentum before it becomes crowded.
+- Video Ideas: the final ranked shortlist across Market Intel, Coin Stats, Competitor Intel, Community Pulse, analytics, saved radar, dismissed ideas, planner cards, and recent uploads.
 - Refresh memory: active planner titles, saved radar titles, dismissed idea keys, and recent uploads are passed into the AI generation step and checked again after Claude responds.
 
 ## Important Editing Rules
