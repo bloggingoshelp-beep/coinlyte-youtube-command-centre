@@ -119,8 +119,11 @@ if (!files.app.includes("pickCommandCard") || !files.app.includes("Skip Today") 
 if (!files.app.includes("Source Radar") || !files.app.includes("data-add-radar-planner") || !files.app.includes("data-add-saved-radar") || !files.app.includes("data-dismiss-saved-radar")) {
   throw new Error("Market Source Radar and Saved Radar must support direct planner conversion and saved radar dismissal.");
 }
-if (!files.app.includes("Top 30 Coin Momentum") || !files.app.includes("market.coins") || !files.refreshScript.includes("fetch_top_coin_momentum")) {
-  throw new Error("Channel Intelligence must include the Top 30 Coin Momentum lane and refresh feed.");
+if (!files.app.includes("Coin Stats") || !files.app.includes("coinMomentumSignals") || !files.app.includes("market.coins") || !files.refreshScript.includes("fetch_top_coin_momentum")) {
+  throw new Error("Channel Intelligence must include the Coin Stats tab backed by the Top 30 Coin Momentum refresh feed.");
+}
+if (files.app.includes("marketLane(\"🚀 Top 30 Coin Momentum\"") && !files.app.includes("function intelligenceCoinStatsContent")) {
+  throw new Error("Top 30 Coin Momentum must live in Coin Stats, not inside Market Intel.");
 }
 if (!files.refreshScript.includes("api.coingecko.com/api/v3/coins/markets") || !files.refreshScript.includes("MAX_NEWS_AGE_DAYS = 7") || !files.refreshScript.includes("Coin Momentum")) {
   throw new Error("Refresh must monitor top-30 coin momentum with a 7-day source window.");

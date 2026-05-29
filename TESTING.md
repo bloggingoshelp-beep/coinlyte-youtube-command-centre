@@ -58,8 +58,8 @@ npm test
 
 ## Intelligence
 
-- Market Intel shows India policy, US regulation, global market, Top 30 Coin Momentum, and embedded Source Radar sections.
-- Top 30 Coin Momentum uses CoinGecko top-market-cap movers plus fresh 7-day Google News sources.
+- Market Intel shows India policy, US regulation, global market, and embedded Source Radar sections.
+- Coin Stats is the separate top-30 coin momentum tab. It uses CoinGecko top-market-cap movers plus fresh 7-day Google News sources.
 - Source Radar shows source-only cards inside Market Intel with source, save, add-planner, and dismiss actions.
 - Saved Source Radar links appear under Content Planner -> Saved Radar and survive Sync Planner.
 - Competitor Intel shows competitor videos and generated CoinLyte-fit ideas.

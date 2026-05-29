@@ -84,9 +84,9 @@ Channel Intelligence is the source of market and audience insight. It includes:
 Important behavior:
 
 - Market Intelligence can create planner-ready ideas.
-- Market Intelligence has four lanes: India Policy, US Regulation, Global Market, and Top 30 Coin Momentum. All lanes use the 7-day freshness window.
+- Market Intelligence has three lanes: India Policy, US Regulation, and Global Market. These lanes use the 7-day freshness window and stay focused on source/news intelligence.
 - Source Radar now lives inside Market Intelligence instead of being a separate tab. It is for scanning the best 10 source links, opening source links, dismissing noise, saving links to Content Planner -> Saved Radar, or sending a source directly into Planner when Kirtish wants to act immediately.
-- Top 30 Coin Momentum is coin-specific. The refresh script pulls CoinGecko top-30 market-cap coins, ranks current movers by 24h/7d movement and volume, then attaches fresh Google News sources. This is where HYPE/Hyperliquid-style momentum, token-specific catalysts, exchange volume shocks, and major top-30 coin narratives should appear.
+- Coin Stats is the separate top-30 coin momentum tab. The refresh script pulls CoinGecko top-30 market-cap coins, ranks current movers by 24h/7d movement and volume, then attaches fresh Google News sources. This is where HYPE/Hyperliquid-style momentum, token-specific catalysts, exchange volume shocks, and major top-30 coin narratives should appear.
 - Competitor Intelligence should show competitor uploads and CoinLyte-fit ideas inspired by them.
 - Community Pulse should show comment-led video ideas before raw top comments.
 - Community Pulse must not learn from obvious scam reply farms. The refresh script filters scam text, phone/contact bait, and fake author patterns such as usernames beginning with `Oliv`. The frontend repeats the same safety filter as a fallback for older cached `live-data.js`.
@@ -411,7 +411,7 @@ Main responsibilities:
 5. Fetch recent comments when scopes allow it.
 6. Fetch YouTube Analytics reports.
 7. Fetch crypto/news RSS feeds.
-8. Split news into India, regulation, market/global, and Top 30 Coin Momentum groups.
+8. Split news into India, regulation, and market/global groups, then build the separate Coin Stats top-30 momentum group.
 9. Build market intelligence and the embedded source radar inputs.
 10. Read shared board memory from Supabase when Supabase secrets are present.
 11. Build a blocked-topic list from active planner cards, saved radar, dismissed ideas, and recent CoinLyte uploads.
@@ -669,7 +669,7 @@ Then browser-test:
 - Source links must open in a new tab.
 - Planner cards created from intelligence must keep source link and research brief.
 - Market Intel Source Radar must remain source-first and scannable. It can save for future review or add directly to Planner, but it should not become another heavy idea board unless explicitly redesigned.
-- Top 30 Coin Momentum must stay tied to top-market-cap coins and the 7-day source window. Do not reintroduce broad old hot-news exceptions unless Kirtish explicitly asks.
+- Coin Stats / Top 30 Coin Momentum must stay tied to top-market-cap coins and the 7-day source window. Do not reintroduce broad old hot-news exceptions unless Kirtish explicitly asks.
 - Refresh idea generation must use board memory. Do not remove the Supabase memory read, blocked-topic prompt section, or post-Claude duplicate filter.
 - Team access changes must be checked server-side, not only hidden in the UI.
 - Team access codes must remain hashed.
