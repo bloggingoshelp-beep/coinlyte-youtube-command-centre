@@ -20,11 +20,12 @@ Before changing code, read:
 - `TESTING.md`
 - `assets/app.js`
 - `.github/scripts/refresh.py`
-- `api/state.js`
+- `api/board.js`
+- `api/db.js`
 - `api/team-user.js`
 - `api/notify.js`
 - `api/refresh.js`
-- `db/schema.sql`
+- `supabase/schema.sql`
 - `tests/static-smoke.mjs`
 
 ## Product Mental Model
@@ -65,7 +66,8 @@ Refresh flow:
 
 Shared board flow:
 
-- `api/state.js` reads and writes Supabase `app_state`.
+- `api/board.js` is the Vercel handler for shared operational board sync.
+- `api/db.js` is the Supabase wrapper for `app_state`, `team_users`, notifications, and related shared-state helpers.
 - `team_users` stores hashed team access codes and board permissions.
 - Browser local storage is fallback/offline cache only.
 - The true shared board state should be Supabase when configured.
