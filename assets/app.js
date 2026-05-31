@@ -688,26 +688,34 @@
   function visibleIdeas() {
     const dismissed = new Set(state.dismissedIdeas);
     const planned = new Set(state.pipeline.map((card) => String(card.title || "").toLowerCase()));
-    const filtered = data.ideas.filter((idea) => !dismissed.has(ideaKey(idea)) && !planned.has(String(idea.title || "").toLowerCase()) && !isHandledIdea(idea));
-    // Auto-show up to 3 coin momentum ideas from the AI-generated pool.
-    // Coin Stats shows the full price table; Video Ideas shows only the narrative-mined ideas.
+    const isVisible = (idea) => !dismissed.has(ideaKey(idea)) && !planned.has(String(idea.title || "").toLowerCase()) && !isHandledIdea(idea);
+
+    // AI-generated ideas from live-data.js — coin momentum capped at 3.
+    const filtered = data.ideas.filter(isVisible);
     let coinMomentumCount = 0;
     const aiIdeas = filtered.filter((idea) => {
-      const isCoinMomentum = idea.signal === "coin_momentum" || idea.source === "Coin Momentum";
-      if (isCoinMomentum) {
-        coinMomentumCount++;
-        return coinMomentumCount <= 3;
-      }
+      const isCoin = idea.signal === "coin_momentum" || idea.source === "Coin Momentum";
+      if (isCoin) { coinMomentumCount++; return coinMomentumCount <= 3; }
       return true;
     });
-    // Merge manually saved coin ideas from Coin Stats (no cap — user explicitly chose these).
-    const savedCoins = (state.savedCoinIdeas || []).filter((idea) =>
-      !dismissed.has(ideaKey(idea)) && !planned.has(String(idea.title || "").toLowerCase())
-    );
-    // Deduplicate by key across both pools.
+
+    // Auto-include top 2 coin narrative ideas from Coin Stats (client-computed).
+    // These are the best narrative angles from coinMomentumSignals(), ranked by momentum score.
+    const autoCoins = coinMomentumSignals()
+      .sort((a, b) => Number(b.item.momentum_score || 0) - Number(a.item.momentum_score || 0))
+      .slice(0, 2)
+      .map((s) => s.idea)
+      .filter(isVisible);
+
+    // Manually saved coin ideas from Coin Stats (user explicitly added — no cap).
+    const savedCoins = (state.savedCoinIdeas || []).filter(isVisible);
+
+    // Merge all pools, deduplicate by ideaKey — AI first, then auto-coins, then manual saves.
     const seen = new Set(aiIdeas.map(ideaKey));
-    const uniqueSaved = savedCoins.filter((idea) => !seen.has(ideaKey(idea)));
-    return [...aiIdeas, ...uniqueSaved];
+    const uniqueAutoCoins = autoCoins.filter((idea) => { const k = ideaKey(idea); if (seen.has(k)) return false; seen.add(k); return true; });
+    const uniqueSaved = savedCoins.filter((idea) => { const k = ideaKey(idea); if (seen.has(k)) return false; seen.add(k); return true; });
+
+    return [...aiIdeas, ...uniqueAutoCoins, ...uniqueSaved];
   }
   function isPlannedIdea(idea) {
     return state.pipeline.some((card) => String(card.title || "").toLowerCase() === String(idea.title || "").toLowerCase()) || isHandledIdea(idea);
@@ -1958,43 +1966,69 @@
     return `${coin} is ${direction}: 24h ${d24 >= 0 ? "+" : ""}${d24}%, 7d ${d7 >= 0 ? "+" : ""}${d7}%, volume ${compact(Number(item.volume || 0))}.`;
   }
   function coinNarrativeAngle(item = {}) {
-    // Build a narrative video angle title from the coin's catalyst.
-    // Looks past FOMO/price-prediction headlines to find the underlying sector story.
+    // Build a narrative video angle from the coin's SECTOR IDENTITY first,
+    // then fall back to headline pattern-matching.
+    // Coin-name knowledge takes priority — the headline alone is often FOMO.
     const coin = item.coin || item.symbol || "This Coin";
-    const sym = item.symbol ? ` (${item.symbol})` : "";
+    const sym = String(item.symbol || "").toUpperCase();
+    const symStr = sym ? ` (${sym})` : "";
     const headline = String(item.title || "").toLowerCase();
     const d24 = Number(item.change_24h || 0);
-    const dir = d24 >= 0 ? "बढ़ रहा है" : "गिर रहा है";
-    if (/polymarket|prediction market|kaishi|forecast/.test(headline))
-      return `${coin} क्यों ${dir}? | Prediction Market War | Polymarket vs ${item.symbol || coin} — Real Competitor?`;
-    if (/cftc|perpetual|perp|dex|decentralised exchange|decentralized/.test(headline))
-      return `${coin}${sym} Explained: Regulation के बाद DEX vs CEX War | Indian Traders के लिए`;
-    if (/telegram|ton ecosystem|900m|messaging app/.test(headline))
-      return `TON (Telegram Coin): 900M Users + Crypto = India का Next Big On-ramp?`;
-    if (/whale|institutional|accumulate|fund/.test(headline))
-      return `${coin} में Whale Accumulation: Long-Term Hold करना सही है? | 5-Year Analysis`;
-    if (/cross.border|remittance|payment|swift|ripple/.test(headline))
-      return `${coin} vs Competitors: Cross-Border Payment King कौन? | India Remittance Guide`;
-    if (/privacy|anonymous|untraceable|monero|zcash|government/.test(headline))
-      return `Privacy Coins का Future: Government Traceability के बाद ${coin} कहाँ खड़ा है?`;
-    if (/liquidity|tvl|inject|pool|locked/.test(headline))
-      return `${coin}: Liquidity Injection क्या होता है? | DeFi में Indian Investors के लिए`;
-    if (/staking|yield|earn|passive|validator/.test(headline))
-      return `${coin} Staking से India में Passive Income: Tax + Returns Complete Guide`;
-    if (/hack|exploit|bridge|stolen|security|drain/.test(headline))
-      return `${coin} Security Alert 🚨 | क्या आपका Investment Safe है? | India Guide`;
-    if (/meme|memecoin|community|viral/.test(headline))
-      return `${coin}${sym} क्या है? Top 30 में आया नया Coin — Hold करें या Skip?`;
-    if (/binance|coinbase|exchange listing|kraken|listed/.test(headline))
-      return `${coin}: Major Exchange Listing का मतलब क्या? | Indian Investors के लिए`;
-    if (/stablecoin|usdt|usdc|tether|peg/.test(headline))
-      return `${coin} Wallet: क्या आपका Stablecoin Safe है? | Self-Custody Guide`;
-    if (/rwa|tokenize|tokenized|real world asset/.test(headline))
-      return `${coin} और Tokenized Assets: India में इसका क्या मतलब है?`;
-    if (/layer 2|l2|scaling|rollup|zk/.test(headline))
-      return `${coin} Layer 2 Explained: Ethereum की Speed Problem का Solution?`;
-    // Default: educational 5-year hold frame
-    return `${coin}${sym} Analysis: क्या 5 साल के लिए Hold करना सही है? | India Investor Guide`;
+    const rising = d24 >= 0;
+
+    // ── COIN-SPECIFIC KNOWLEDGE (overrides headline patterns) ──────────────
+    // These coins have well-known sector narratives regardless of the headline.
+    const coinKnowledge = {
+      RAIN:  `RAIN Token क्यों ${rising ? "बढ़" : "गिर"} रहा है? | Prediction Market War: Polymarket vs RAIN — असली Competitor?`,
+      HYPE:  `Hyperliquid (HYPE): CFTC Approval के बाद DEX vs CEX War — Indian Traders के लिए क्या बदला?`,
+      TON:   `TON (Telegram Coin): 900M Users + Crypto = India का Next Big On-ramp?`,
+      XMR:   `Monero (XMR) क्यों? Privacy Coins का Future — Government Traceability के बाद क्या करें?`,
+      ZEC:   `Zcash (ZEC): Privacy Coin में Whale क्यों आ रहे हैं? | India Crypto Privacy Guide`,
+      XLM:   `Stellar (XLM) vs XRP: Cross-Border Payment King कौन? | India Remittance Angle`,
+      BCH:   `Bitcoin Cash (BCH) क्या है? Bitcoin से कैसे अलग है? | Indian Investors के लिए`,
+      BNB:   `Binance (BNB) Ecosystem: June Update क्या लाया? | India में BNB कैसे Use करें?`,
+      M:     `MemeCore (M) क्या है? Top 30 में आया नया Meme Coin — Long-Term Hold करें या Skip?`,
+      USDT:  `Tether Wallet: USDT पर Direct Control — क्या आपका Stablecoin अब और Safe है?`,
+      USDC:  `USDC Freeze Warning: आपका Stablecoin Safe है या नहीं? | India Self-Custody Guide`,
+      BTC:   `Bitcoin Long-Term: Bear Pressure में भारतीय निवेशक क्या करें? | 5-Year Strategy`,
+      ETH:   `Ethereum का Real Future: Staking, L2, और India से Passive Income कैसे?`,
+      SOL:   `Solana vs Ethereum: Speed और Ecosystem में कौन आगे है? | India Investor Guide`,
+      ADA:   `Cardano (ADA): Real World Assets पर काम — क्या 5 साल के लिए Hold सही है?`,
+      AVAX:  `Avalanche (AVAX): DeFi और Subnets का Future — India में कैसे Invest करें?`,
+      HBAR:  `Hedera (HBAR): Enterprise Blockchain का Future — Indian Investors के लिए`,
+      LTC:   `Litecoin (LTC): Bitcoin का Digital Silver — अभी भी Hold करना सही है?`,
+    };
+    if (sym && coinKnowledge[sym]) return coinKnowledge[sym];
+
+    // ── HEADLINE PATTERN MATCHING (when no coin-specific knowledge exists) ──
+    if (/polymarket|prediction market|kaishi|forecast market/.test(headline))
+      return `${coin} क्यों ${rising ? "बढ़" : "गिर"} रहा है? | Prediction Market War — Polymarket Competitor Analysis`;
+    if (/cftc|perpetual|perp|dex approval|decentralised|decentralized exchange/.test(headline))
+      return `${coin}${symStr}: Regulation के बाद DEX vs CEX War — Indian Traders के लिए क्या बदला?`;
+    if (/telegram|messaging app|900m users|mini app/.test(headline))
+      return `${coin}${symStr}: Messaging App + Crypto = India का Biggest Crypto On-ramp?`;
+    if (/whale|institutional fund|accumulate|large holder/.test(headline))
+      return `${coin}${symStr} में Whale Accumulation: Long-Term Hold करना सही है? | 5-Year Analysis`;
+    if (/cross.border|remittance|swift|payment corridor/.test(headline))
+      return `${coin}${symStr}: Cross-Border Payment में कौन जीतेगा? | India Remittance Guide`;
+    if (/privacy|anonymous|untraceable|government track|surveillance/.test(headline))
+      return `Privacy Coins का Future: Government Traceability Push के बाद ${coin} कहाँ खड़ा है?`;
+    if (/staking|validator|yield|passive earn/.test(headline))
+      return `${coin}${symStr} Staking: India से Passive Income कैसे? Tax + Returns Complete Guide`;
+    if (/hack|exploit|bridge attack|stolen|drain|security breach/.test(headline))
+      return `🚨 ${coin} Security Alert: क्या आपका Investment Safe है? | India Protection Guide`;
+    if (/meme|viral community|dog coin/.test(headline))
+      return `${coin}${symStr} क्या है? Top 30 में आया Meme Coin — Hold करें या Skip?`;
+    if (/new listing|listed on|exchange adds|added to/.test(headline))
+      return `${coin}${symStr}: नई Exchange Listing का मतलब क्या? | Indian Investors के लिए`;
+    if (/rwa|tokenize|real world asset|tokenized bond/.test(headline))
+      return `${coin}${symStr} और Real World Assets: India में इसका क्या Impact है?`;
+    if (/layer 2|l2 scaling|rollup|zk proof/.test(headline))
+      return `${coin}${symStr} Layer 2 Explained: Scaling का Future — Indian Developer Guide`;
+    if (/ai agent|artificial intelligence|machine learning/.test(headline))
+      return `${coin}${symStr} + AI: Crypto में Artificial Intelligence का Role क्या है?`;
+    // Default: 5-year educational frame
+    return `${coin}${symStr}: क्या 5 साल के लिए Hold करना सही है? | India Long-Term Investor Guide`;
   }
   function saveCoinIdea(idea) {
     if (!state.savedCoinIdeas) state.savedCoinIdeas = [];
