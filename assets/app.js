@@ -689,33 +689,60 @@
     const dismissed = new Set(state.dismissedIdeas);
     const planned = new Set(state.pipeline.map((card) => String(card.title || "").toLowerCase()));
     const isVisible = (idea) => !dismissed.has(ideaKey(idea)) && !planned.has(String(idea.title || "").toLowerCase()) && !isHandledIdea(idea);
+    const dedup = (ideas, seen) => ideas.filter((idea) => { const k = ideaKey(idea); if (seen.has(k)) return false; seen.add(k); return true; });
 
-    // AI-generated ideas from live-data.js — coin momentum capped at 3.
-    const filtered = data.ideas.filter(isVisible);
+    // ── POOL 1: AI-generated ideas from live-data.js (coin momentum capped at 3) ──
     let coinMomentumCount = 0;
-    const aiIdeas = filtered.filter((idea) => {
+    const aiIdeas = data.ideas.filter(isVisible).filter((idea) => {
       const isCoin = idea.signal === "coin_momentum" || idea.source === "Coin Momentum";
       if (isCoin) { coinMomentumCount++; return coinMomentumCount <= 3; }
       return true;
     });
-
-    // Auto-include top 2 coin narrative ideas from Coin Stats (client-computed).
-    // These are the best narrative angles from coinMomentumSignals(), ranked by momentum score.
-    const autoCoins = coinMomentumSignals()
-      .sort((a, b) => Number(b.item.momentum_score || 0) - Number(a.item.momentum_score || 0))
-      .slice(0, 2)
-      .map((s) => s.idea)
-      .filter(isVisible);
-
-    // Manually saved coin ideas from Coin Stats (user explicitly added — no cap).
-    const savedCoins = (state.savedCoinIdeas || []).filter(isVisible);
-
-    // Merge all pools, deduplicate by ideaKey — AI first, then auto-coins, then manual saves.
     const seen = new Set(aiIdeas.map(ideaKey));
-    const uniqueAutoCoins = autoCoins.filter((idea) => { const k = ideaKey(idea); if (seen.has(k)) return false; seen.add(k); return true; });
-    const uniqueSaved = savedCoins.filter((idea) => { const k = ideaKey(idea); if (seen.has(k)) return false; seen.add(k); return true; });
 
-    return [...aiIdeas, ...uniqueAutoCoins, ...uniqueSaved];
+    // ── POOL 2: Top 2 coin narrative ideas from Coin Stats (auto-flow) ──
+    const autoCoins = dedup(
+      coinMomentumSignals()
+        .sort((a, b) => Number(b.item.momentum_score || 0) - Number(a.item.momentum_score || 0))
+        .slice(0, 2).map((s) => s.idea).filter(isVisible),
+      seen
+    );
+
+    // ── POOL 3: Top 3 market intel signals (best of India/US/Global combined) ──
+    const autoMarket = dedup(
+      marketSignals()
+        .sort((a, b) => (normalizePriority(a.idea.urgency) === "urgent" ? -1 : 1))
+        .slice(0, 3).map((s) => s.idea).filter(isVisible),
+      seen
+    );
+
+    // ── POOL 4: Top 3 competitor intel ideas ──
+    const autoCompetitor = dedup(
+      competitorSuggestedIdeas().slice(0, 3).filter(isVisible),
+      seen
+    );
+
+    // ── POOL 5: Top 3 community pulse ideas (from comment themes) ──
+    const autoCommmunity = dedup(
+      (data.commentThemes || [])
+        .filter((t) => Number(t.count || 0) > 0)
+        .slice(0, 3)
+        .map((theme) => ({
+          title: `💬 ${theme.topic} — India Complete Guide`,
+          category: "Community",
+          urgency: Number(theme.count) >= 10 ? "High" : "Medium",
+          source: "Community Comments",
+          signal: "audience_ask",
+          reason: `${theme.count} viewers asked about "${theme.topic}". Sample: "${(theme.sample || "").slice(0, 100)}"`
+        }))
+        .filter(isVisible),
+      seen
+    );
+
+    // ── POOL 6: Manually saved coin ideas (no cap — user explicitly chose these) ──
+    const savedCoins = dedup((state.savedCoinIdeas || []).filter(isVisible), seen);
+
+    return [...aiIdeas, ...autoCoins, ...autoMarket, ...autoCompetitor, ...autoCommmunity, ...savedCoins];
   }
   function isPlannedIdea(idea) {
     return state.pipeline.some((card) => String(card.title || "").toLowerCase() === String(idea.title || "").toLowerCase()) || isHandledIdea(idea);
@@ -879,7 +906,7 @@
       ["US Regulation", "regulation", market.regulation || [], "🧾", "gold"],
       ["Global Market", "market", market.market || [], "📈", "blue"]
     ];
-    return buckets.flatMap(([bucket, key, items, emoji, tone]) => (items || []).slice(0, 10).map((item) => {
+    return buckets.flatMap(([bucket, key, items, emoji, tone]) => (items || []).slice(0, 5).map((item) => {
       const age = sourceAge(item);
       const category = item.category || item.region || bucket;
       const title = item.title || "Untitled market signal";
@@ -1737,52 +1764,46 @@
     return "Use this as macro context for weekly market direction, portfolio risk, and simple Hindi explainers.";
   }
   function marketSourceRadar() {
-    const radar = newsRadarSignals();
-    const counts = radar.reduce((acc, item) => {
-      acc[item.signal.key] = (acc[item.signal.key] || 0) + 1;
-      return acc;
-    }, {});
-    return `<section class="panel news-radar-panel embedded-radar">
+    const radar = newsRadarSignals().slice(0, 10);
+    const counts = radar.reduce((acc, item) => { acc[item.signal.key] = (acc[item.signal.key] || 0) + 1; return acc; }, {});
+    return `<section class="panel embedded-radar">
       <div class="panel-head">
         <div>
-          <h3>🛰️ Source Radar — Best 10 Links From Market Intel</h3>
-          <div class="panel-sub">Merged here to avoid duplicate tabs. Save for later, open source, dismiss noise, or add directly to Planner.</div>
+          <h3>🛰️ Source Radar</h3>
+          <div class="panel-sub">Top ${radar.length} sources ranked by freshness + India relevance. Save, open, or add to Planner.</div>
         </div>
-        <span class="tag green">Top ${radar.length}</span>
+        <div class="radar-summary-pills">
+          <span class="rpill red">🇮🇳 ${counts.india || 0}</span>
+          <span class="rpill gold">🧾 ${counts.regulation || 0}</span>
+          <span class="rpill blue">📈 ${counts.market || 0}</span>
+        </div>
       </div>
-      <div class="news-radar-summary">
-        <span>🇮🇳 India Policy ${counts.india || 0}</span>
-        <span>🧾 US Regulation ${counts.regulation || 0}</span>
-        <span>📈 Global Market ${counts.market || 0}</span>
-      </div>
-      <div class="news-radar-grid">
-        ${radar.map((item, rank) => newsRadarCard(item, rank)).join("") || `<div class="empty">No fresh radar sources in this refresh. Run Refresh Live Data to fetch news.</div>`}
+      <div class="radar-chip-grid">
+        ${radar.map((item, rank) => newsRadarChip(item, rank)).join("") || `<div class="empty">No radar sources. Run Refresh Live Data.</div>`}
       </div>
     </section>`;
   }
-  function newsRadarCard(item, rank) {
+  function newsRadarChip(item, rank) {
     const { signal, index, score } = item;
     const idea = signal.idea;
     const title = signal.item?.title || idea.title;
-    const sourceType = marketSourceType(signal.key);
-    const liveUse = marketLiveUse(signal.key);
-    const saved = state.savedRadar.some((item) => radarKey(item) === radarKey({ title, sourceUrl: idea.sourceUrl }));
-    return `<article class="news-radar-card tone-${signal.tone}">
-      <div class="news-radar-top">
-        <span class="news-radar-rank">#${rank + 1}</span>
-        <span class="source-age ${normalizePriority(idea.urgency)}">${escapeHTML(signal.age)}</span>
+    const saved = state.savedRadar.some((s) => radarKey(s) === radarKey({ title, sourceUrl: idea.sourceUrl }));
+    const toneMap = { india: "red", regulation: "gold", market: "blue" };
+    const tone = toneMap[signal.key] || "blue";
+    return `<div class="radar-chip tone-${tone}">
+      <div class="radar-chip-top">
+        <span class="radar-chip-rank">#${rank + 1}</span>
+        <span class="radar-chip-age">${escapeHTML(signal.age)}</span>
+        <span class="radar-chip-score">${score}</span>
       </div>
-      <div class="market-kicker">${escapeHTML(signal.emoji)} ${escapeHTML(sourceType)} · Radar score ${score}</div>
-      <h4>${escapeHTML(title)}</h4>
-      <p>${escapeHTML(newsAngle(signal.item, signal.bucket))}</p>
-      <div class="live-use-box">🎙️ ${escapeHTML(liveUse)}</div>
-      <div class="market-card-actions">
-        ${idea.sourceUrl ? `<a class="mini-link" href="${escapeHTML(idea.sourceUrl)}" target="_blank" rel="noreferrer">📰 Open Source ↗</a>` : `<span class="mini-link muted-link">📰 Source pending</span>`}
-        <button class="primary-btn compact-btn" data-save-radar="${index}" type="button" ${saved ? "disabled" : ""}>${saved ? "Saved" : "Save Radar"}</button>
-        <button class="primary-btn compact-btn alt-btn" data-add-radar-planner="${index}" type="button">+ Planner</button>
-        <button class="ghost-btn compact-btn dismiss-btn" data-dismiss-generated data-idea-payload="${escapeHTML(ideaPayload(idea))}" type="button">Dismiss</button>
+      <p class="radar-chip-title">${escapeHTML(title)}</p>
+      <div class="radar-chip-actions">
+        ${idea.sourceUrl ? `<a class="mini-link" href="${escapeHTML(idea.sourceUrl)}" target="_blank" rel="noreferrer">↗</a>` : ""}
+        <button class="ghost-btn micro-btn" data-save-radar="${index}" type="button" ${saved ? "disabled" : ""}>${saved ? "✓" : "Save"}</button>
+        <button class="ghost-btn micro-btn" data-add-radar-planner="${index}" type="button">Planner</button>
+        <button class="ghost-btn micro-btn dismiss-btn" data-dismiss-generated data-idea-payload="${escapeHTML(ideaPayload(idea))}" type="button">✕</button>
       </div>
-    </article>`;
+    </div>`;
   }
   function savedRadarFromSignal(signal, score = 0) {
     const idea = signal.idea;
