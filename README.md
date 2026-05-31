@@ -91,13 +91,31 @@ All must pass before pushing. See `TESTING.md` for the full browser checklist.
 - Supabase `app_state` — shared board (planner, brands, team, notifications, dismissed, saved radar)
 - Supabase `team_users` — hashed team login codes and board permissions
 
-## Recent Changes (May 31, 2026)
+## Recent Changes (May 31, 2026 — full session)
 
-- **Coin Stats null-data fix** — `coinMomentumSignals()` filters out items where `change_24h` is null, preventing stale `news.hot` entries from rendering as broken coin cards
-- **Video performance fix** — `videoPerformance` built from Analytics `topVideos` rows (real view counts) instead of RSS cross-reference that always returned 0
-- **Scam filter tightened** — added `!!TICKER!!` regex and pump-spam vocabulary (`boring stock`, `threw it into`, `stock profit`)
-- **Video Ideas framework** — coin momentum ideas capped at 3 in `visibleIdeas()`; urgency section fixed (was empty); coin price moves now treated as narrative signals not content
-- **Evergreen angles** — refresh prompt enriched with Tax & Compliance, SIP & Long-Term Investing, Passive Income minimum floors; new category labels and `categoryEmoji()` icons added
+**Refresh pipeline & scam filter**
+- `videoPerformance` built from Analytics `topVideos` rows — real view counts (was always 0)
+- Scam filter: `!!TICKER!!` regex + pump vocabulary (`boring stock`, `threw it into`, `stock profit`)
+- Coin Stats: `coinMomentumSignals()` filters null `change_24h` to remove ghost items
+
+**Video Ideas engine — now a true combined shortlist**
+- `visibleIdeas()` pulls from 6 pools: AI-generated ideas, auto-top-2 coins, top-3 market intel signals, top-3 competitor ideas, top-3 community theme ideas, manually saved coin ideas
+- All 6 pools deduplicated by `ideaKey()` before rendering
+- Coin momentum cap: 3 from AI pool; 2 auto from `coinMomentumSignals()` by momentum score
+- Urgency definition covers India regulation, security threats, tax news, community spikes (4+ urgent per refresh)
+- Zero FOMO language enforced: no 10X, pump, breakout, price targets in any title
+- Evergreen minimum floors: MIN 2 Security, MIN 1 Tax & Compliance, MIN 1 SIP/Investing per refresh
+
+**Coin Stats — narrative video angles per card**
+- `coinNarrativeAngle(item)`: 18-coin knowledge map (RAIN→Prediction Market War, HYPE→DEX/CEX, BNB→Binance ecosystem, TON→Telegram on-ramp, XMR/ZEC→Privacy coins, etc.) checked before headline patterns
+- 14 headline pattern frames for unknown coins (prediction market, regulation, whale, cross-border, privacy, liquidity, staking, hack, meme, listing, RWA, L2, AI)
+- Each coin card shows "📹 Video Angle" section with the narrative title in a styled box
+- "＋ Video Ideas" button on each coin card saves angle to `state.savedCoinIdeas` (localStorage `cl_saved_coin_ideas_v1`) and merges into Video Ideas without cap
+- "＋ Planner" button creates a planner card directly
+
+**Market Intel — layout improvements**
+- Each lane (India Policy, US Regulation, Global Market) capped at 5 cards (was 10)
+- Source Radar replaced full-size cards with compact chips (10 max, auto-fill grid, micro-action buttons)
 
 ## Deployment
 

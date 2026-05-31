@@ -41,7 +41,7 @@ Last full QA: May 31, 2026. Covered frontend syntax, all Vercel API route syntax
 
 ## Changes Made May 31, 2026
 
-This section documents every code change made in the Claude Code session on May 31, 2026. Future maintainers should read this before touching the files it covers.
+This section documents every code change made across the full Claude Code session on May 31, 2026. Future maintainers should read this before touching the files it covers.
 
 ### 1. Coin Stats null-data ghost items fixed (`assets/app.js`)
 
@@ -92,6 +92,60 @@ The video explains the narrative/catalyst. Never the price move.
 **Problem:** CLAUDE.md listed `api/state.js` and `db/schema.sql` in the "Read First" section. Neither file exists. The actual files are `api/board.js` + `api/db.js` and `supabase/schema.sql`.
 
 **Fix:** CLAUDE.md updated to reference the correct paths. "Shared board flow" section clarified: `api/board.js` is the Vercel handler, `api/db.js` is the Supabase wrapper.
+
+### 7. Coin narrative headline fix — Claude was skipping FOMO headlines (`refresh.py`)
+
+**Problem:** 7 of 10 Google News coin headlines were FOMO/trading-oriented ("BNB Price Prediction: $750 Breakout", "Buy, sell, or wait? Memecore swing traders"). Claude's own ZERO-FOMO rule caused it to refuse ideas from these headlines entirely, resulting in only 1 coin idea being generated instead of 2–3.
+
+**Fix:** Prompt updated with explicit instruction to look PAST the headline framing. Added 5 worked examples showing how to extract the real catalyst from polluted headlines. Added `MIN 2` coin narrative ideas as a hard floor with "never skip this section" instruction.
+
+### 8. Coin Stats — narrative video angle per card (`assets/app.js`, `assets/styles.css`)
+
+**New function `coinNarrativeAngle(item)`:**
+Generates a narrative video angle title using a two-layer approach:
+1. **Coin knowledge map (checked first):** 18 well-known coins mapped to sector-specific narratives regardless of headline. Examples: `RAIN → Prediction Market War vs Polymarket`, `HYPE → DEX vs CEX after CFTC regulation`, `TON → 900M Telegram users as India crypto on-ramp`, `BNB → Binance ecosystem milestone`, `XMR/ZEC → Privacy coins vs government traceability`.
+2. **Headline pattern matching (fallback):** 14 patterns for unknown coins — prediction market, DEX/regulation, Telegram ecosystem, whale accumulation, cross-border payments, privacy, liquidity events, staking, security breaches, meme chains, exchange listings, stablecoins, RWA tokenization, Layer 2. Default: 5-year hold analysis frame.
+
+**`coinMomentumSignals()` updated:** Uses `coinNarrativeAngle()` as the idea title. Category changed to "Coin Analysis". Urgency changed from "Urgent" to "High" (price move alone is not urgent).
+
+**Coin Stats card redesign:** Each card shows:
+- Coin data strip (rank, 24h%, 7d%, volume) at top
+- "📹 Video Angle" section (violet gradient box) with the narrative title
+- "＋ Video Ideas" button → saves to `state.savedCoinIdeas` (localStorage `cl_saved_coin_ideas_v1`)
+- "＋ Planner" button → creates planner card directly
+- "✓ In Ideas" state when already saved (grayed, not re-clickable)
+- Non-coin market signal cards are unchanged
+
+**New `saveCoinIdea(idea)` function:** Saves coin idea to `state.savedCoinIdeas`, deduplicates by `ideaKey()`, shows undo toast. Persisted in localStorage key `cl_saved_coin_ideas_v1`.
+
+### 9. Video Ideas — auto-flow top 2 coins + precision angle fix (`assets/app.js`)
+
+**Auto-flow:** `visibleIdeas()` now auto-includes top 2 coin ideas from `coinMomentumSignals()` sorted by `momentum_score` descending. These appear in Video Ideas without any user action.
+
+**Precision fix for known coins:** `coinNarrativeAngle()` coin knowledge map checked before headline patterns. Prevents RAIN from getting "Liquidity Injection" frame (matches `liquidity` keyword) when the real story is Prediction Market War vs Polymarket.
+
+### 10. Video Ideas — 6-pool combined shortlist (`assets/app.js`)
+
+**Problem:** `visibleIdeas()` only read from `data.ideas` (AI-generated) + `state.savedCoinIdeas`. Market Intel, Competitor Intel, and Community Pulse signals were NOT represented in Video Ideas automatically.
+
+**Fix:** `visibleIdeas()` now merges 6 pools, each deduplicated by `ideaKey()`:
+- Pool 1: AI-generated ideas from live-data.js (coin momentum capped at 3)
+- Pool 2: Auto top-2 coin narrative ideas from `coinMomentumSignals()` by score
+- Pool 3: Top 3 market intel signals from `marketSignals()` (best of India/US/Global)
+- Pool 4: Top 3 competitor ideas from `competitorSuggestedIdeas()`
+- Pool 5: Top 3 community theme ideas from `data.commentThemes` (by count)
+- Pool 6: Manually saved coin ideas from `state.savedCoinIdeas` (no cap)
+
+### 11. Market Intel — 5-card cap per lane + compact Source Radar (`assets/app.js`, `assets/styles.css`)
+
+**Lane cap:** `marketSignals()` `.slice(0, 10)` per bucket changed to `.slice(0, 5)`. Each of the 3 lanes (India Policy, US Regulation, Global Market) shows maximum 5 cards.
+
+**Source Radar redesign:** `marketSourceRadar()` and `newsRadarCard()` replaced with compact chip design:
+- `newsRadarChip()` renders small cards with rank badge, age, score, 2-line truncated title, micro-buttons
+- Grid: `grid-template-columns: repeat(auto-fill, minmax(220px, 1fr))` — chips wrap responsively
+- Capped at 10 chips (was unlimited full-size cards)
+- New CSS classes: `.radar-chip-grid`, `.radar-chip`, `.radar-chip-top`, `.radar-chip-title`, `.radar-chip-actions`, `.rpill`, `.micro-btn`
+- Summary pills show India/US/Global counts in compact pill format
 
 ## Main User Experience
 
@@ -727,19 +781,25 @@ Then browser-test:
 - Do not hardcode access codes, API keys, tokens, Supabase keys, Resend keys, or GitHub tokens.
 - Do not expose `SUPABASE_SERVICE_ROLE_KEY` in frontend code.
 - Do not remove login protection from `api/static.js`.
-- Do not rename localStorage keys without migration.
+- Do not rename localStorage keys without migration. Active keys include: `cl_pipeline_v4`, `cl_saved_radar_v1`, `cl_saved_coin_ideas_v1`, `cl_dismissed_ideas_v1`, `cl_dismissed_command_v1`, `cl_brands_v3`, `cl_team_members_v1`, `cl_notifications_v1`, `cl_planner_sort_v1`, `cl_refresh_job_v1`, `cl_hub_links_v3`.
 - Do not let Refresh Live Data overwrite planner, brands, team users, saved radar, or notifications.
 - Do not turn Sync Board into a full YouTube/news/Claude refresh.
 - Source links must open in a new tab.
 - Planner cards created from intelligence must keep source link and research brief.
-- Market Intel Source Radar must remain source-first and scannable.
-- Coin Stats must stay tied to top-market-cap coins and the 7-day source window. Items without `change_24h` data (old-format hot news entries) must be filtered out and never shown as coin momentum cards.
+- Market Intel Source Radar must remain source-first and scannable. Maximum 10 chips.
+- Market Intel lanes must each show maximum 5 cards. Do not revert to 10.
+- Coin Stats must stay tied to top-market-cap coins and the 7-day source window. Items without `change_24h` data must be filtered out.
 - Coin Stats and Market Intel must remain separate tabs with separate data.
-- Video Ideas coin momentum ideas must explain the narrative/catalyst behind the price move — never raw price prediction, FOMO language, or "buy now" framing. The `visibleIdeas()` cap of 3 coin momentum ideas must remain.
+- Each Coin Stats card must show a "📹 Video Angle" section with a narrative-mined title via `coinNarrativeAngle()`. Do not revert to generic `newsAngle()` text for coin cards.
+- `coinNarrativeAngle()` coin knowledge map must be checked BEFORE headline pattern matching. The 18-coin map provides accurate sector narratives; do not remove or reorder the lookup.
+- `state.savedCoinIdeas` must persist to localStorage key `cl_saved_coin_ideas_v1` and survive page reload.
+- Video Ideas must combine all 6 pools (AI, auto-coins, market signals, competitor, community themes, saved coins). Do not reduce it back to AI-only.
+- Video Ideas coin momentum ideas must explain the narrative/catalyst — never price prediction or FOMO. The 3-cap from AI pool and 2-cap from auto-flow must remain.
+- Video Ideas deduplication must run across all 6 pools before rendering. No idea should appear twice.
 - Refresh idea generation must use board memory. Do not remove the Supabase memory read, blocked-topic prompt section, or post-Claude duplicate filter.
-- The Claude prompt must always include: zero-tolerance FOMO rules, evergreen angles (Security, Tax & Compliance, SIP & Investing, Passive Income), narrative mining for coin signals, minimum floor requirements, and urgency definition covering at least 4 urgent ideas per refresh.
+- The Claude prompt must always include: zero-tolerance FOMO rules, evergreen angles (Security, Tax & Compliance, SIP & Investing, Passive Income), narrative mining for coin signals, minimum floor requirements (MIN 2 Security, MIN 1 Tax, MIN 1 SIP, MIN 2 Coin Narrative), and urgency definition.
 - Video performance must be built from `topVideos` rows — never from RSS cross-reference.
-- Scam filter in `refresh.py` must include: SCAM_WORDS, SCAM_AUTHOR_PREFIXES, SCAM_TEXT_PATTERNS including the `!!TICKER!!` regex.
+- Scam filter in `refresh.py` must include: SCAM_WORDS list, SCAM_AUTHOR_PREFIXES (`oliv`), SCAM_TEXT_PATTERNS including the `r'!![A-Z0-9]{2,}!!'` regex.
 - Team access changes must be checked server-side, not only hidden in the UI.
 - Team access codes must remain hashed (PBKDF2).
 - Keep backup/import flows working before large UI changes.

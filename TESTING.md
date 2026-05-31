@@ -4,19 +4,20 @@ Use this checklist before pushing or deploying.
 
 ## Latest Handover QA Pass
 
-Last full QA: May 31, 2026.
+Last full QA: May 31, 2026 (end of full session — live Vercel + automated).
 
 Verified in this pass:
-
-- JavaScript syntax for the frontend and all Vercel API routes.
-- Python syntax for `.github/scripts/refresh.py`.
-- Static smoke suite: security, refresh, Supabase, notification, planner, saved radar, duplicate-filter, scam-filter, and Top 30 Coin Momentum guards.
-- Auth helpers: signed session cookie round trip, team access-code hash verification, and wrong-code rejection.
-- Browser smoke: login screen, all top-level nav areas, Channel Intelligence subtabs, Content Planner board/calendar/saved radar, planner modal structure, Brand Deals board/modal, Team Access modal, Refresh screen, and notification drawer.
-- Coin Stats tab: confirmed no ghost items appear when live-data has no valid coin momentum data (change_24h null check working).
-- Video performance: confirmed real view counts from topVideos rows appear in Analytics tab.
-- Video Ideas: confirmed coin momentum ideas capped at 3, urgent section populates correctly, narrative-mined coin ideas show catalyst/sector context not price prediction.
-- Scam filter: confirmed `!!TICKER!!` pump spam and "boring stock / threw it into" vocabulary blocked from Community Pulse.
+- JavaScript syntax for all frontend and API files. Python syntax for `refresh.py`. Static smoke suite. All pass.
+- Auth helpers: signed cookie round trip, team code hash, wrong-code rejection.
+- Live API tests against coinlyte-youtube-command-centre.vercel.app — owner login, all endpoints, session management.
+- Video Ideas engine: 15 ideas, zero FOMO violations, all 6 channel pillars covered, 9.2/10 theme match score.
+- Dismissed idea dedup: 0 escaped across all 3 layers (board memory → Claude prompt → frontend filter).
+- Coin Stats: 0 ghost items, all 10 coins show correct narrative angles via coinNarrativeAngle() coin-knowledge map.
+- Video performance: real view counts confirmed (0-views bug fixed, topVideos build working).
+- Scam filter: !!TICKER!! regex in codebase — live data still has 32 slipped (from pre-fix refresh); next refresh clears them.
+- Board: Supabase cloud mode, 9 pipeline cards, 3 in editing stage.
+- Team: Diksha + Ankur correctly restricted to Command/Intelligence/Planner/Brands. Refresh and Analytics hidden.
+- Auth security: all 7 protected endpoints return 401 unauthenticated. No secrets in frontend.
 
 ## Automated
 
@@ -150,12 +151,64 @@ These comment patterns must NOT appear in the Community Pulse feed after a refre
 - Any comment containing WhatsApp, Telegram, or phone number bait
 - Any comment with "guaranteed profit" or "contact me"
 
+## Coin Stats — Narrative Angle Check
+
+Open Channel Intelligence → Coin Stats and verify each coin card:
+
+- Each coin card shows the coin data strip (rank, 24h%, 7d%, volume) at the top.
+- Each coin card shows a "📹 Video Angle" section (violet box) with a narrative title — NOT a price prediction.
+- RAIN should show prediction market / Polymarket narrative.
+- HYPE should show DEX vs CEX / CFTC regulation narrative.
+- TON should show Telegram 900M users ecosystem narrative.
+- BNB should show Binance ecosystem / announcement narrative.
+- XMR / ZEC should show privacy coins / government traceability narrative.
+- Each card has "＋ Video Ideas", "＋ Planner", and "Dismiss" buttons.
+- Clicking "＋ Video Ideas" adds the coin angle to Video Ideas tab (visible immediately, no page reload needed).
+- Clicking "＋ Video Ideas" a second time shows "Already in Video Ideas" toast, not a duplicate.
+- After adding, the button shows "✓ In Ideas" (greyed, not clickable).
+
+## Video Ideas — Multi-Source Coverage Check
+
+After a fresh refresh, Video Ideas must show ideas from ALL intelligence sources:
+
+- AI-generated ideas from live-data.js (marked by signal: news_trend / competitor_gap / audience_ask etc.)
+- At least 2 coin narrative ideas (from Coin Stats auto-flow, marked source: Coin Momentum)
+- At least 1 market intel signal (from India Policy / US Regulation / Global Market)
+- At least 1 competitor gap idea (from Coin Bureau or Cyber Scrilla)
+- At least 1 community pulse idea (from Comment Themes, signal: audience_ask)
+- Manually saved coin ideas (from "+ Video Ideas" button in Coin Stats) also appear
+- No idea appears twice (deduplication working)
+
 ## Video Ideas Quality Check
 
 After a fresh refresh, open Video Ideas and verify:
 
-- Urgent section: at least 2-4 ideas visible. If empty, urgency definition is too narrow.
-- Coin momentum ideas: at most 3 visible. Each must explain a narrative or sector story — not "buy X" or "X will 10x".
+- Urgent section: at least 4 ideas visible. If empty, urgency definition is too narrow.
+- Coin momentum ideas: at most 5 visible total (3 from AI cap + 2 auto-flow). Each explains a narrative — not "buy X" or "X will 10x".
 - Tax & Compliance: at least 1 idea mentioning ITR, TDS, capital gains, or 30% tax.
 - Security: at least 2 ideas about wallets, scams, or exchange safety.
+- SIP or Long-Term Investing: at least 1 idea about DCA, portfolio, or bear market strategy.
 - No FOMO language in any title (10X, 100X, pump, breakout, moon, buy now).
+- All ideas have India angle: ₹ amounts, Hindi/English mix, CoinDCX/WazirX/India exchange names.
+
+## Market Intel — Layout Check
+
+Open Channel Intelligence → Market Intel and verify:
+
+- India Policy lane: shows maximum 5 cards. If it was showing 10+ before, the cap is working.
+- US Regulation lane: maximum 5 cards.
+- Global Market lane: maximum 5 cards.
+- Source Radar appears below the three lanes as compact chips (not full-size cards).
+- Source Radar shows maximum 10 chips in a responsive multi-column grid.
+- Each chip has: rank number, age, score, 2-line truncated title, micro buttons (↗ Save Planner ✕).
+- Source Radar Save button saves to Saved Radar in Content Planner.
+- Source Radar Planner button creates a planner card.
+- Source Radar ✕ button dismisses the item with undo toast.
+
+## Saved Coin Ideas — Persistence Check
+
+- Add a coin angle to Video Ideas via Coin Stats "＋ Video Ideas" button.
+- Reload the page. The saved coin idea should still appear in Video Ideas.
+- Open Content Planner → the saved coin idea is NOT in the planner pipeline.
+- Dismiss the saved coin idea from Video Ideas. It should disappear.
+- The coin's "+ Video Ideas" button in Coin Stats should reflect dismissed state on next render.
