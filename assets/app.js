@@ -872,7 +872,8 @@
   }
   function coinMomentumSignals() {
     const market = data.market || {};
-    return (market.coins || market.hot || []).slice(0, 12).map((item) => {
+    const raw = (market.coins || market.hot || []).filter((item) => item.change_24h != null);
+    return raw.slice(0, 12).map((item) => {
       const age = sourceAge(item);
       const title = item.title || `${item.coin || item.symbol || "Top 30 coin"} momentum signal`;
       return {
