@@ -1209,6 +1209,32 @@ th { color: var(--muted); font-size: .74rem; text-transform: uppercase; }
 }
 .market-signal-card h4 { margin: 10px 0 8px; padding-right: 74px; line-height: 1.24; }
 .market-signal-card p { margin: 0; color: #3d4560; font-style: italic; }
+.angle-line { font-style: italic; font-size: .88rem; }
+.coin-video-angle {
+  margin: 10px 0 8px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, rgba(109,40,217,.07), rgba(109,40,217,.03));
+  border: 1px solid rgba(109,40,217,.18);
+  border-radius: 8px;
+}
+.coin-angle-label {
+  display: block;
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--violet);
+  margin-bottom: 5px;
+}
+.coin-angle-title {
+  margin: 0;
+  font-size: .92rem;
+  font-weight: 700;
+  color: #1a1a3e;
+  line-height: 1.35;
+  font-style: normal !important;
+}
+.action-saved { opacity: .65; cursor: default; pointer-events: none; }
 .source-age {
   position: absolute;
   top: 14px;

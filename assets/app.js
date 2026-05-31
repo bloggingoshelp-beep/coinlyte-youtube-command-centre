@@ -77,6 +77,7 @@
     hubLinks: store.get("cl_hub_links_v3", data.defaultHubLinks).map(withId),
     brands: store.get("cl_brands_v3", data.defaultBrands).map(withId),
     savedRadar: normalizeSavedRadar(store.get("cl_saved_radar_v1", [])),
+    savedCoinIdeas: store.get("cl_saved_coin_ideas_v1", []),
     dismissedIdeas: store.get("cl_dismissed_ideas_v1", []),
     dismissedCommand: store.get("cl_dismissed_command_v1", []),
     teamMembers: normalizeTeamMembers(store.get("cl_team_members_v1", DEFAULT_TEAM)),
@@ -446,6 +447,7 @@
     store.set("cl_hub_links_v3", state.hubLinks);
     store.set("cl_brands_v3", state.brands);
     store.set("cl_saved_radar_v1", state.savedRadar);
+    store.set("cl_saved_coin_ideas_v1", state.savedCoinIdeas);
     store.set("cl_dismissed_ideas_v1", state.dismissedIdeas);
     store.set("cl_dismissed_command_v1", state.dismissedCommand);
     store.set("cl_team_members_v1", cleanTeamMembers());
@@ -687,10 +689,10 @@
     const dismissed = new Set(state.dismissedIdeas);
     const planned = new Set(state.pipeline.map((card) => String(card.title || "").toLowerCase()));
     const filtered = data.ideas.filter((idea) => !dismissed.has(ideaKey(idea)) && !planned.has(String(idea.title || "").toLowerCase()) && !isHandledIdea(idea));
-    // Cap coin momentum ideas at 3 in the final visible list.
+    // Auto-show up to 3 coin momentum ideas from the AI-generated pool.
     // Coin Stats shows the full price table; Video Ideas shows only the narrative-mined ideas.
     let coinMomentumCount = 0;
-    return filtered.filter((idea) => {
+    const aiIdeas = filtered.filter((idea) => {
       const isCoinMomentum = idea.signal === "coin_momentum" || idea.source === "Coin Momentum";
       if (isCoinMomentum) {
         coinMomentumCount++;
@@ -698,6 +700,14 @@
       }
       return true;
     });
+    // Merge manually saved coin ideas from Coin Stats (no cap — user explicitly chose these).
+    const savedCoins = (state.savedCoinIdeas || []).filter((idea) =>
+      !dismissed.has(ideaKey(idea)) && !planned.has(String(idea.title || "").toLowerCase())
+    );
+    // Deduplicate by key across both pools.
+    const seen = new Set(aiIdeas.map(ideaKey));
+    const uniqueSaved = savedCoins.filter((idea) => !seen.has(ideaKey(idea)));
+    return [...aiIdeas, ...uniqueSaved];
   }
   function isPlannedIdea(idea) {
     return state.pipeline.some((card) => String(card.title || "").toLowerCase() === String(idea.title || "").toLowerCase()) || isHandledIdea(idea);
@@ -890,7 +900,7 @@
     const raw = (market.coins || market.hot || []).filter((item) => item.change_24h != null);
     return raw.slice(0, 12).map((item) => {
       const age = sourceAge(item);
-      const title = item.title || `${item.coin || item.symbol || "Top 30 coin"} momentum signal`;
+      const narrativeTitle = coinNarrativeAngle(item);
       return {
         bucket: "Top 30 Coin Momentum",
         key: "coins",
@@ -899,14 +909,14 @@
         item,
         age,
         idea: {
-          title: `🚀 ${title}`,
-          category: item.category || item.region || "Coin Momentum",
-          urgency: "Urgent",
+          title: narrativeTitle,
+          category: "Coin Analysis",
+          urgency: "High",
           signal: "coin_momentum",
-          source: "Top 30 Coin Momentum",
+          source: "Coin Momentum",
           sourceUrl: item.url || item.link || "",
           sourceAge: age,
-          reason: `${newsAngle(item, "Top 30 Coin Momentum")} ${coinMomentumSummary(item)} Source went public ${age}. Brief: explain the Indian investor impact in simple Hindi with one clear rupee/risk takeaway.`
+          reason: `${coinMomentumSummary(item)} Source: ${item.title || ""}. Brief: explain the catalyst and sector narrative for Indian investors in simple Hindi.`
         }
       };
     }).filter((signal) => isVisibleGeneratedIdea(signal.idea));
@@ -1905,19 +1915,29 @@
   function marketSignalCard(signal, index) {
     const idea = signal.idea;
     const priority = normalizePriority(idea.urgency);
+    const isCoin = signal.key === "coins";
+    const alreadySaved = isCoin && (state.savedCoinIdeas || []).some((i) => ideaKey(i) === ideaKey(idea));
     return `<article class="market-signal-card tone-${signal.tone}">
       <span class="source-age ${priority}">${escapeHTML(signal.age)}</span>
       <div class="market-kicker">${escapeHTML(signal.emoji)} ${escapeHTML(signal.bucket)} · ${escapeHTML(idea.category)}</div>
-      <h4>${escapeHTML(idea.title)}</h4>
-      <p>💡 Angle: ${escapeHTML(newsAngle(signal.item, signal.bucket))}</p>
-      ${signal.key === "coins" ? coinMomentumStrip(signal.item) : ""}
+      ${isCoin ? `
+        ${coinMomentumStrip(signal.item)}
+        <div class="coin-video-angle">
+          <span class="coin-angle-label">📹 Video Angle</span>
+          <p class="coin-angle-title">${escapeHTML(idea.title)}</p>
+        </div>
+      ` : `
+        <h4>${escapeHTML(idea.title)}</h4>
+        <p class="angle-line">💡 ${escapeHTML(newsAngle(signal.item, signal.bucket))}</p>
+      `}
       <div class="card-actions">
         <span class="badge ${priority === "urgent" ? "red" : priority === "high" ? "amber" : "navy"}">${priority === "urgent" ? "🔴 Urgent" : priority === "high" ? "🟡 High" : "⚪ Medium"}</span>
         <span class="badge teal">🇮🇳 India angle</span>
       </div>
       <div class="market-card-actions">
-        ${idea.sourceUrl ? `<a class="mini-link" href="${escapeHTML(idea.sourceUrl)}" target="_blank" rel="noreferrer">📰 Source ↗</a>` : `<span class="mini-link muted-link">📰 Source pending</span>`}
-        <button class="primary-btn compact-btn" data-add-generated data-idea-payload="${escapeHTML(ideaPayload(idea))}" type="button">+ Planner</button>
+        ${idea.sourceUrl ? `<a class="mini-link" href="${escapeHTML(idea.sourceUrl)}" target="_blank" rel="noreferrer">📰 Source ↗</a>` : `<span class="mini-link muted-link">📰 No source yet</span>`}
+        ${isCoin ? `<button class="ghost-btn compact-btn${alreadySaved ? " action-saved" : ""}" data-add-coin-idea data-idea-payload="${escapeHTML(ideaPayload(idea))}" type="button">${alreadySaved ? "✓ In Ideas" : "＋ Video Ideas"}</button>` : ""}
+        <button class="primary-btn compact-btn" data-add-generated data-idea-payload="${escapeHTML(ideaPayload(idea))}" type="button">＋ Planner</button>
         <button class="ghost-btn compact-btn dismiss-btn" data-dismiss-generated data-idea-payload="${escapeHTML(ideaPayload(idea))}" type="button">Dismiss</button>
       </div>
     </article>`;
@@ -1936,6 +1956,61 @@
     const d7 = Number(item.change_7d || 0);
     const direction = d24 >= 0 || d7 >= 0 ? "gaining attention" : "showing risk pressure";
     return `${coin} is ${direction}: 24h ${d24 >= 0 ? "+" : ""}${d24}%, 7d ${d7 >= 0 ? "+" : ""}${d7}%, volume ${compact(Number(item.volume || 0))}.`;
+  }
+  function coinNarrativeAngle(item = {}) {
+    // Build a narrative video angle title from the coin's catalyst.
+    // Looks past FOMO/price-prediction headlines to find the underlying sector story.
+    const coin = item.coin || item.symbol || "This Coin";
+    const sym = item.symbol ? ` (${item.symbol})` : "";
+    const headline = String(item.title || "").toLowerCase();
+    const d24 = Number(item.change_24h || 0);
+    const dir = d24 >= 0 ? "बढ़ रहा है" : "गिर रहा है";
+    if (/polymarket|prediction market|kaishi|forecast/.test(headline))
+      return `${coin} क्यों ${dir}? | Prediction Market War | Polymarket vs ${item.symbol || coin} — Real Competitor?`;
+    if (/cftc|perpetual|perp|dex|decentralised exchange|decentralized/.test(headline))
+      return `${coin}${sym} Explained: Regulation के बाद DEX vs CEX War | Indian Traders के लिए`;
+    if (/telegram|ton ecosystem|900m|messaging app/.test(headline))
+      return `TON (Telegram Coin): 900M Users + Crypto = India का Next Big On-ramp?`;
+    if (/whale|institutional|accumulate|fund/.test(headline))
+      return `${coin} में Whale Accumulation: Long-Term Hold करना सही है? | 5-Year Analysis`;
+    if (/cross.border|remittance|payment|swift|ripple/.test(headline))
+      return `${coin} vs Competitors: Cross-Border Payment King कौन? | India Remittance Guide`;
+    if (/privacy|anonymous|untraceable|monero|zcash|government/.test(headline))
+      return `Privacy Coins का Future: Government Traceability के बाद ${coin} कहाँ खड़ा है?`;
+    if (/liquidity|tvl|inject|pool|locked/.test(headline))
+      return `${coin}: Liquidity Injection क्या होता है? | DeFi में Indian Investors के लिए`;
+    if (/staking|yield|earn|passive|validator/.test(headline))
+      return `${coin} Staking से India में Passive Income: Tax + Returns Complete Guide`;
+    if (/hack|exploit|bridge|stolen|security|drain/.test(headline))
+      return `${coin} Security Alert 🚨 | क्या आपका Investment Safe है? | India Guide`;
+    if (/meme|memecoin|community|viral/.test(headline))
+      return `${coin}${sym} क्या है? Top 30 में आया नया Coin — Hold करें या Skip?`;
+    if (/binance|coinbase|exchange listing|kraken|listed/.test(headline))
+      return `${coin}: Major Exchange Listing का मतलब क्या? | Indian Investors के लिए`;
+    if (/stablecoin|usdt|usdc|tether|peg/.test(headline))
+      return `${coin} Wallet: क्या आपका Stablecoin Safe है? | Self-Custody Guide`;
+    if (/rwa|tokenize|tokenized|real world asset/.test(headline))
+      return `${coin} और Tokenized Assets: India में इसका क्या मतलब है?`;
+    if (/layer 2|l2|scaling|rollup|zk/.test(headline))
+      return `${coin} Layer 2 Explained: Ethereum की Speed Problem का Solution?`;
+    // Default: educational 5-year hold frame
+    return `${coin}${sym} Analysis: क्या 5 साल के लिए Hold करना सही है? | India Investor Guide`;
+  }
+  function saveCoinIdea(idea) {
+    if (!state.savedCoinIdeas) state.savedCoinIdeas = [];
+    const key = ideaKey(idea);
+    if (state.savedCoinIdeas.some((i) => ideaKey(i) === key)) {
+      toast("Already in Video Ideas.");
+      return;
+    }
+    state.savedCoinIdeas.push({ ...idea, savedAt: Date.now() });
+    store.set("cl_saved_coin_ideas_v1", state.savedCoinIdeas);
+    toast("Coin angle added to Video Ideas ✓", { label: "Undo", run: () => {
+      state.savedCoinIdeas = state.savedCoinIdeas.filter((i) => ideaKey(i) !== key);
+      store.set("cl_saved_coin_ideas_v1", state.savedCoinIdeas);
+      render();
+    }});
+    render();
   }
   function bindIntelligenceActions() {
     $all("[data-news-title]").forEach((btn) => btn.addEventListener("click", () => addIdeaToPipeline({
@@ -1967,6 +2042,10 @@
     $all("[data-add-generated]").forEach((btn) => btn.addEventListener("click", () => {
       const idea = readIdeaPayload(btn);
       if (idea) animateAction(btn, "add", () => addIdeaToPipeline(idea));
+    }));
+    $all("[data-add-coin-idea]").forEach((btn) => btn.addEventListener("click", () => {
+      const idea = readIdeaPayload(btn);
+      if (idea) animateAction(btn, "add", () => saveCoinIdea(idea));
     }));
     $all("[data-dismiss-generated]").forEach((btn) => btn.addEventListener("click", () => {
       const idea = readIdeaPayload(btn);
