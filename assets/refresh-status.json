@@ -1,6 +1,6 @@
 {
   "status": "completed",
-  "completedAt": "2026-05-31T08:38:44Z",
+  "completedAt": "2026-05-31T09:37:01Z",
   "lastRefresh": "May 31, 2026",
   "datasets": {
     "channel": true,
@@ -8,6 +8,6 @@
     "comments": 200,
     "competitors": 24,
     "news": 44,
-    "ideas": 15
+    "ideas": 14
   }
 }
