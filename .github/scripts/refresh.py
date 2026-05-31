@@ -18,7 +18,8 @@ def utc_now():
 SCAM_WORDS = ['whatsapp','telegram','signal','dm me','message me','invest with me',
   'double your','guaranteed profit','profit of','trading expert','account manager',
   'recovery','lost funds','contact me','reach me','bit.ly','t.me','wa.me',
-  'pump','signal group','join my','100x profit']
+  'pump','signal group','join my','100x profit',
+  'threw it into','boring stock','stock profit']
 
 SCAM_AUTHOR_PREFIXES = ['oliv']
 SCAM_AUTHOR_WORDS = ['whatsapp','telegram','signal','crypto help','trading expert',
@@ -28,7 +29,8 @@ SCAM_TEXT_PATTERNS = [
   r'\b(text|reply|message|contact|reach)\s+(me|him|her|us)\b',
   r'\b(whats\s?app|telegram|signal)\b',
   r'\b(recover|recovery)\s+(your\s+)?(funds|money|wallet|account)\b',
-  r'\bguaranteed\s+(profit|returns?)\b'
+  r'\bguaranteed\s+(profit|returns?)\b',
+  r'!![A-Z0-9]{2,}!!'  # !!TICKER!! style coordinated pump spam
 ]
 
 def is_scam(t): return any(s in t.lower() for s in SCAM_WORDS)
@@ -740,44 +742,42 @@ video_performance = []
 underperformers   = []
 
 try:
-  # Build per-video stats from analytics topVideos
+  # Build per-video stats directly from analytics topVideos rows.
+  # Recent RSS uploads are too new to appear in the 90-day top-video chart,
+  # so cross-referencing RSS IDs against topVideos always produces views=0.
+  # Instead, build the performance list from topVideos directly and resolve
+  # titles from the videoTitles map fetched during analytics collection.
   top_rows = []
-  vt = analytics.get('p90',{}).get('topVideos',{}) or analytics.get('videoTitles',{})
-  tv = analytics.get('p90',{}).get('topVideos',{})
+  tv = analytics.get('p90',{}).get('topVideos',{}) or analytics.get('topVideos',{})
   if tv and tv.get('rows'):
-    top_rows = tv['rows']  # [videoId, views, minutes, avgPct, likes, subs]
+    top_rows = tv['rows']  # [videoId, views, estimatedMinutes, avgViewPct, likes, subsGained]
 
-  # Map video IDs to performance data
-  perf_map = {}
-  for row in top_rows:
-    vid_id = row[0]
-    perf_map[vid_id] = {'views': row[1], 'watchPct': row[3], 'likes': row[4], 'subsGained': row[5]}
+  # 90-day total views as baseline for pctOfAvg
+  total_90d_views = 0
+  p90_core = analytics.get('p90',{}).get('core',{})
+  if p90_core and p90_core.get('rows'):
+    total_90d_views = p90_core['rows'][0][0]
+  avg_per_video = total_90d_views / max(len(top_rows), 1) if total_90d_views > 0 else 0
 
-  # 30-day avg views per video (proxy for baseline)
-  p28_views = 0
-  p28_core  = analytics.get('p28',{}).get('core',{})
-  if p28_core and p28_core.get('rows'):
-    p28_views = p28_core['rows'][0][0]
-  avg_views_per_video = p28_views / max(len(coinlyte_vids), 1)
-
-  for v in coinlyte_vids[:10]:
-    vid_id = v.get('videoId','')
-    title  = v.get('title','')
-    days_n = v.get('days','')
-    perf   = perf_map.get(vid_id, {})
-    v_views = perf.get('views', 0)
-    pct_of_avg = (v_views / avg_views_per_video * 100) if avg_views_per_video > 0 and v_views > 0 else None
-    entry = {'videoId':vid_id,'title':title,'days':days_n,'views':v_views,
-             'watchPct':perf.get('watchPct',0),'likes':perf.get('likes',0),
-             'pctOfAvg':round(pct_of_avg,1) if pct_of_avg else None}
+  for row in top_rows[:10]:
+    vid_id  = row[0]
+    v_views = row[1]
+    watchPct = round(float(row[3]), 1) if len(row) > 3 else 0
+    likes   = row[4] if len(row) > 4 else 0
+    title   = video_titles.get(vid_id, f'Video {vid_id[:8]}')
+    pct_of_avg = round(v_views / avg_per_video * 100, 1) if avg_per_video > 0 else None
+    entry = {'videoId': vid_id, 'title': title, 'views': v_views,
+             'watchPct': watchPct, 'likes': likes,
+             'pctOfAvg': pct_of_avg}
     video_performance.append(entry)
-    if pct_of_avg and pct_of_avg < 60 and days_n not in ['Today','Yesterday']:
+    if pct_of_avg and pct_of_avg < 60:
       underperformers.append(entry)
 
   if underperformers:
     print(f"Underperformers identified: {len(underperformers)} videos below 60% of avg")
     for u in underperformers:
       print(f"  {u['title'][:50]} → {u['views']:,} views ({u['pctOfAvg']}% of avg)")
+  print(f"Video performance: {len(video_performance)} entries built from topVideos")
 except Exception as e:
   print(f"Performance analysis error: {e}")
 
