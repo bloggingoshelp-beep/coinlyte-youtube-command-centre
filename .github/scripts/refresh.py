@@ -924,14 +924,16 @@ HARD RULES — violation means the idea is wasted:
 9. Mobile-first titles: punchy, emoji, under 75 chars, fear OR curiosity hook
 10. No pure price prediction — transform all coin signals into educational/safety angles
 
-WHAT COUNTS AS URGENT (only these — do not mark anything else urgent):
-  ✓ India government/SEBI/RBI action directly changing what Indian holders can do with crypto THIS WEEK
-  ✓ Security breach or scam actively targeting Indian crypto users right now
-  ✓ Major Indian exchange (CoinDCX, WazirX, Binance India) listing/delisting/outage/hack
-  ✓ Indian Parliament crypto legislation that passed or is voting this week
-  ✗ NOT urgent: coin price moves (even +10%), US regulatory news, global market dips, DeFi protocol news
+WHAT COUNTS AS URGENT — must always generate at least 4 urgent ideas every refresh:
+  ✓ India government/SEBI/RBI/Parliament action directly affecting Indian crypto holders
+  ✓ Breaking global crypto news with clear India investor impact (stablecoin freeze, exchange collapse)
+  ✓ Security breach, scam wave, or hack that Indian users need to know about this week
+  ✓ Regulation news (US/global) that will change how Indians can buy/hold/tax crypto
+  ✓ Audience questions that have spiked — topics 20+ viewers asked in the same week
+  ✓ Major market event that Indian investors are actively searching RIGHT NOW (BTC at key level, ETH move)
+  ✗ NOT urgent: coin price move alone with no India story, evergreen education that can wait, DeFi protocol launches with no India angle
 
-PRIORITY DISTRIBUTION: 3 urgent (India-specific breaking ONLY) + 7 high (competitor gaps + audience asks + India news) + 10 medium (education + comparison + coin explained + community Q&A + evergreen)
+PRIORITY DISTRIBUTION: 4 urgent (time-sensitive, post within 3 days) + 7 high (strong, plan this month) + 9 medium (evergreen queue)
 
 Sources for each idea MUST be one of: "Coin Bureau", "Cyber Scrilla", "India News", "Regulation News", "Market News", "Coin Momentum", "Community Comments", "Analytics Data", "Topic Pivot"
 
