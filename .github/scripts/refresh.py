@@ -902,11 +902,38 @@ US/global regulation (GENIUS Act / Clarity Act / SEC):
 Global market (Bitcoin / Ethereum / macro):
 {chr(10).join(f'- {t}' for t in mkt_hdls) if mkt_hdls else '- No live news'}
 
-Top 30 coin momentum radar — USE SPARINGLY (max 2 ideas total from this section, max priority = HIGH):
-These are CoinGecko top-30 market-cap coins with recent movement. Reframe ALL coin momentum signals as
-educational "Explained" or "Risk for Indian investors" content — never pure price prediction.
-Only use coins that are recognisable to Indian retail investors (BTC, ETH, XRP, BNB, SOL, ADA, HYPE, TON).
-Skip low-name-recognition coins (ZEC, XMR, BCH, RAIN, LEO, WBT) unless the India angle is exceptional.
+Top 30 coin momentum radar — NARRATIVE MINING (max 3 ideas from this section):
+A coin price move is a SIGNAL, not the content. Your job is to find the CATALYST and NARRATIVE
+behind the move, then frame a video explaining that larger story to Indian investors.
+
+NARRATIVE MINING FRAMEWORK — for each coin signal:
+  Step 1. Read the attached news headline — it usually reveals the catalyst
+  Step 2. Identify the bigger narrative: sector war, protocol milestone, regulatory shift, liquidity event
+  Step 3. Frame the video as: "WHY is X growing?" or "Is X the next [category leader]?" or "The [sector] war nobody is talking about"
+  Step 4. The video explains the NARRATIVE, not the price. Indian investors learn what the move means.
+
+EXAMPLES of correct narrative-mined ideas:
+  Signal: RAIN +23%, news: "RAIN crypto jumps 23% – $100M liquidity push, competing with Polymarket/Kaishi"
+  → Catalyst: prediction market liquidity war
+  → Video idea: "RAIN Token क्यों बढ़ रहा है? | Prediction Market War | Polymarket vs RAIN — असली Competitor?"
+  → NOT: "RAIN Token Buy करें? 23% Pump के बाद क्या करें?"
+
+  Signal: HYPE +5%, news: "HYPE Token Hits Record as CFTC Perpetuals Approval Lifts DEX"
+  → Catalyst: regulatory clarity opening DEX perpetuals
+  → Video idea: "Hyperliquid क्या है? | CFTC के बाद DEX vs CEX War | Indian Traders के लिए क्या बदलेगा?"
+  → NOT: "Hyperliquid 10X करेगा? Buy करें?"
+
+  Signal: BNB +7.5%, news: "BNB 200MA breakout, Binance June 1 Teaser"
+  → Catalyst: Binance ecosystem milestone + product announcement
+  → Video idea: "Binance का June 1 Secret: BNB Holders को क्या मिलेगा? | India में Binance कैसे Use करें?"
+  → NOT: "BNB $750 Breakout? Buy करें या Wait?"
+
+RULES for coin narrative ideas:
+  ✓ Any coin in the list is eligible — even unknown ones have narratives worth explaining
+  ✓ Priority: HIGH if narrative is fresh this week, MEDIUM if sector is ongoing, URGENT only if India-regulation-linked
+  ✓ Title must explain the narrative/catalyst — never raw price percentage
+  ✓ Indian investor framing: Indian exchange availability, tax angle, rupee context, comparison to familiar coins
+  ✗ NEVER: "Will X hit ₹Y?" or "X is pumping, buy now" or pure price prediction
 {chr(10).join(f'- {t}' for t in coin_hdls) if coin_hdls else '- No top-30 coin momentum news this refresh'}
 
 ═══ YOUR TASK ═══
@@ -915,7 +942,7 @@ Generate exactly 20 candidate video ideas for CoinLyte. The app will keep the be
 HARD RULES — violation means the idea is wasted:
 1. NEVER duplicate a recent upload topic
 2. NEVER recreate a topic already in Shared Board Memory, even if wording changes
-3. MAX 2 ideas from Coin Momentum source, MAX priority HIGH (never urgent for coin price moves)
+3. MAX 3 ideas from Coin Momentum source. Priority = HIGH for fresh narratives, MEDIUM for ongoing sector stories, URGENT only if India-regulation-linked. NEVER urgent for price move alone.
 4. MAX 2 ideas per event cluster, MAX 4 per source group (India News, Regulation, Market, Competitors)
 5. MIN 3 ideas must come from Community Comments (real viewer demand always gets a slot)
 6. MIN 2 ideas must be Safety/Security format (this channel's highest-performing category)
