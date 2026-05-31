@@ -934,33 +934,48 @@ A coin price move is a SIGNAL, not the content. Your job is to find the CATALYST
 behind the move, then frame a video explaining that larger story to Indian investors.
 
 NARRATIVE MINING FRAMEWORK — for each coin signal:
-  Step 1. Read the attached news headline — it usually reveals the catalyst
-  Step 2. Identify the bigger narrative: sector war, protocol milestone, regulatory shift, liquidity event
-  Step 3. Frame the video as: "WHY is X growing?" or "Is X the next [category leader]?" or "The [sector] war nobody is talking about"
-  Step 4. The video explains the NARRATIVE, not the price. Indian investors learn what the move means.
+  Step 1. The news headline may itself be FOMO/trading-oriented ("Price Prediction", "Buy now", "Breakout").
+          IGNORE that framing completely. Look past it to find the underlying event or sector story.
+  Step 2. Ask: What is actually happening to this coin's sector or protocol? What changed?
+          Liquidity event? Regulatory milestone? Ecosystem announcement? Institutional move? Sector competition?
+  Step 3. Frame the video as: "WHY is X growing?" or "Is X the next [category leader]?" or "The [sector] war"
+  Step 4. The video explains the NARRATIVE, not the price. Indian investors learn what this move means.
+  Step 5. You MUST generate at least 2 coin narrative ideas every refresh — do not skip this section.
 
-EXAMPLES of correct narrative-mined ideas:
-  Signal: RAIN +23%, news: "RAIN crypto jumps 23% – $100M liquidity push, competing with Polymarket/Kaishi"
-  → Catalyst: prediction market liquidity war
-  → Video idea: "RAIN Token क्यों बढ़ रहा है? | Prediction Market War | Polymarket vs RAIN — असली Competitor?"
-  → NOT: "RAIN Token Buy करें? 23% Pump के बाद क्या करें?"
+EXAMPLES — notice how FOMO headlines are reframed into narratives:
+  Signal: RAIN +23%, news: "RAIN crypto jumps 23% – Can $100M liquidity push prices to $0.02?"
+  → Ignore "prices to $0.02" (price prediction). Focus on: $100M liquidity + Polymarket competitor
+  → Catalyst: Prediction market liquidity war — RAIN vs Polymarket for market dominance
+  → Video: "RAIN Token क्यों बढ़ रहा है? | Prediction Market War | Polymarket vs RAIN — Real Competitor?"
 
-  Signal: HYPE +5%, news: "HYPE Token Hits Record as CFTC Perpetuals Approval Lifts DEX"
-  → Catalyst: regulatory clarity opening DEX perpetuals
-  → Video idea: "Hyperliquid क्या है? | CFTC के बाद DEX vs CEX War | Indian Traders के लिए क्या बदलेगा?"
-  → NOT: "Hyperliquid 10X करेगा? Buy करें?"
+  Signal: BNB +7.5%, news: "BNB Price Prediction: $750 Breakout Test Builds as Binance June 1 Teaser"
+  → Ignore "Price Prediction: $750" (price target). Focus on: Binance June 1 announcement
+  → Catalyst: Binance ecosystem event — what is Binance launching that affects Indian users?
+  → Video: "Binance का June 1 Secret: BNB Holders को क्या मिलेगा? | India में क्या बदलेगा?"
 
-  Signal: BNB +7.5%, news: "BNB 200MA breakout, Binance June 1 Teaser"
-  → Catalyst: Binance ecosystem milestone + product announcement
-  → Video idea: "Binance का June 1 Secret: BNB Holders को क्या मिलेगा? | India में Binance कैसे Use करें?"
-  → NOT: "BNB $750 Breakout? Buy करें या Wait?"
+  Signal: ZEC +6%, news: "Zcash Whale Turns ZEC Portfolio 10x to Over $150 Million"
+  → Ignore "10x" (FOMO). Focus on: large institutional accumulation of a privacy coin
+  → Catalyst: Privacy coin institutional interest + India govt traceability push = tension
+  → Video: "Privacy Coins क्यों? Government Traceable Crypto चाहती है — ZEC, XMR का Future?"
+
+  Signal: TON +7%, news: "TON price prediction 2026-2030: the Telegram takeover"
+  → Ignore "price prediction". Focus on: Telegram's crypto ecosystem strategy
+  → Catalyst: 900M Telegram users + crypto wallet = India's largest potential crypto on-ramp
+  → Video: "Telegram Coin (TON) क्या है? | 900 Million Users + Crypto = India का Next Big Thing?"
+
+  Signal: MemeCore (M) +8%, news: "Buy, sell, or wait? Here's what Memecore swing traders should do"
+  → Ignore trading signal. Focus on: new meme coin in top 30 — what is MemeCore?
+  → Catalyst: New category of chain-native meme coin competing with Solana meme ecosystem
+  → Video: "MemeCore क्या है? Top 30 में आया नया Meme Coin — Long-Term Hold करें या Skip?"
 
 RULES for coin narrative ideas:
+  ✓ MUST generate at least 2 coin narrative ideas every refresh — this is non-negotiable
   ✓ Any coin in the list is eligible — even unknown ones have narratives worth explaining
-  ✓ Priority: HIGH if narrative is fresh this week, MEDIUM if sector is ongoing, URGENT only if India-regulation-linked
-  ✓ Title must explain the narrative/catalyst — never raw price percentage
-  ✓ Indian investor framing: Indian exchange availability, tax angle, rupee context, comparison to familiar coins
-  ✗ NEVER: "Will X hit ₹Y?" or "X is pumping, buy now" or pure price prediction
+  ✓ The worse the news headline (more FOMO/trading), the harder you must look for the real story underneath
+  ✓ Priority: HIGH if narrative is fresh this week, MEDIUM if sector is ongoing
+  ✓ Title explains narrative/catalyst — never raw price or percentage
+  ✓ Indian investor framing: exchange availability, tax, rupee context, India regulation angle
+  ✗ Do NOT skip coin signals just because the attached headline is FOMO — reframe it instead
 {chr(10).join(f'- {t}' for t in coin_hdls) if coin_hdls else '- No top-30 coin momentum news this refresh'}
 
 ═══ YOUR TASK ═══
@@ -968,7 +983,7 @@ Generate exactly 20 candidate video ideas for CoinLyte. The app keeps the best n
 
 HARD RULES:
 1. NEVER duplicate a recent upload or Shared Board Memory topic
-2. MAX 3 ideas from Coin Momentum — use price move as signal, explain the narrative, 5-year frame
+2. Coin Momentum: MIN 2, MAX 3 ideas. Reframe any FOMO headline into a sector narrative. Never skip this section even if headlines look like price predictions — dig for the underlying story.
 3. MAX 2 ideas per news event cluster, MAX 4 per source group
 4. MIN 3 ideas from Community Comments — real viewer demand always gets answered
 5. MIN 2 Security ideas every refresh — highest converting category on this channel
