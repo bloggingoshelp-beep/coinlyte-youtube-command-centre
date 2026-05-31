@@ -37,7 +37,61 @@ This is intentionally simple. The app should remain easy for AI tools to underst
 
 ## Latest Handover Status
 
-Final local handover QA was run on May 29, 2026. The pass covered frontend syntax, all Vercel API route syntax, refresh-script Python syntax, static smoke tests, auth helper checks, and browser navigation through the main app areas. See `TESTING.md` for the exact checklist and commands.
+Last full QA: May 31, 2026. Covered frontend syntax, all Vercel API route syntax, refresh-script Python syntax, static smoke tests, auth helper checks, browser navigation, and verification of all May 31 bug fixes listed below.
+
+## Changes Made May 31, 2026
+
+This section documents every code change made in the Claude Code session on May 31, 2026. Future maintainers should read this before touching the files it covers.
+
+### 1. Coin Stats null-data ghost items fixed (`assets/app.js`)
+
+**Problem:** The live-data.js written by an older version of `refresh.py` stored coin momentum data under a `news.hot` key as plain news articles — no coin fields (`change_24h`, `coin`, `rank`, `volume`). The app fell back to `market.hot` when `market.coins` was empty, so Coin Stats showed 12 items with blank/zero coin metadata: "Top-30 coin · rank #- · 24h +0%".
+
+**Fix:** In `coinMomentumSignals()`, added `.filter((item) => item.change_24h != null)` before `.slice(0, 12).map(...)`. Items without real CoinGecko price data are silently dropped. The `marketLane` component shows "No Coin Momentum signals in this refresh" when the array is empty — which is honest until the next refresh writes proper data.
+
+**Current behavior:** Coin Stats shows nothing until `refresh.py` writes `news.coins` with real CoinGecko data. After a fresh refresh, coins with valid momentum data appear correctly.
+
+### 2. Video performance views=0 fixed (`.github/scripts/refresh.py`)
+
+**Problem:** `video_performance` was built by cross-referencing the 10 most recent RSS upload IDs against the Analytics `topVideos` ID list. These two sets have zero overlap — recent videos are too new to appear in the 90-day top performers chart. Every entry showed `views: 0, watchPct: 0`.
+
+**Fix:** Rebuilt `video_performance` directly from `topVideos` rows. Titles are resolved from the `video_titles` dict fetched during analytics collection. `pctOfAvg` is calculated against the 90-day total views baseline. Result: real view counts, watch percentages, and underperformer detection now work correctly.
+
+### 3. Scam comment filter tightened (`.github/scripts/refresh.py`)
+
+**Problem:** Two coordinated pump-spam comments slipped through ("I sold some boring stock profit and threw it into !!SPAX21K!!"). The `!!TICKER!!` pattern and the pump vocabulary were not covered by existing filters.
+
+**Fix:** Added to `SCAM_WORDS`: `'threw it into'`, `'boring stock'`, `'stock profit'`. Added to `SCAM_TEXT_PATTERNS`: `r'!![A-Z0-9]{2,}!!'` (double-exclamation ticker spam regex). Verified: slip-through comments now caught; legitimate Hindi/English viewer comments unaffected.
+
+### 4. Video Ideas framework redesigned (`assets/app.js`, `.github/scripts/refresh.py`)
+
+**Problem:** Coin momentum signals were flooding the urgent section with pure price-action ideas ("BNB $750 Breakout? Buy करें?", "HYPE 10X Potential?") — wrong format for an education channel. The urgent section was also sometimes completely empty when the prompt definition was too strict.
+
+**Fixes applied in layers:**
+
+**Layer 1 — frontend safety cap in `visibleIdeas()`:** Coin momentum ideas (signal `coin_momentum` or source `Coin Momentum`) are capped at 3 in the visible list regardless of what the AI generates. Extra coin ideas are silently filtered.
+
+**Layer 2 — narrative mining framework in Claude prompt:** A coin price move is now treated as a signal to find the underlying catalyst and sector narrative — not as content itself. The prompt includes a 4-step framework and concrete examples:
+- RAIN +23%, news about $100M liquidity push competing with Polymarket → "Why is RAIN growing? Prediction Market War explained"
+- HYPE +5%, CFTC perpetuals approval → "Hyperliquid: DEX vs CEX war after regulation"
+- BNB +7.5%, Binance June teaser → "What does Binance June 1 mean for Indian BNB holders?"
+The video explains the narrative/catalyst. Never the price move.
+
+**Layer 3 — urgency definition balanced:** Urgency now covers: India SEBI/RBI/Parliament action, breaking global news with India impact, active security threats, tax/compliance news, and community question spikes. The minimum is 4 urgent ideas per refresh. Coin price move alone is NOT urgent.
+
+### 5. Evergreen content angles added to refresh prompt (`.github/scripts/refresh.py`)
+
+**Problem:** The refresh prompt generated ideas almost entirely from news signals. Channel-defining content categories — Tax & Compliance, SIP & Long-Term Investing, Passive Income — were rarely represented even though the audience consistently searches for them.
+
+**Fix:** Added an "EVERGREEN CONTENT ANGLES" section to the Claude prompt with scope, title examples, and format guidance for each angle. Added hard floor minimums: MIN 2 Security ideas, MIN 1 Tax & Compliance idea, MIN 1 SIP/Long-Term Investing idea per refresh. These floors apply even when there is no specific news hook — the audience demand is constant.
+
+**New category labels added to prompt:** `Tax & Compliance`, `SIP & Investing`, `Passive Income`, `Coin Analysis` (alongside existing categories). `categoryEmoji()` in `app.js` updated with matching icons: 🧾 for Tax, 📈 for SIP/Portfolio, 💡 for Staking/Yield, 🪙 for Coin Analysis.
+
+### 6. CLAUDE.md path corrections (separate commit `5a517f4`)
+
+**Problem:** CLAUDE.md listed `api/state.js` and `db/schema.sql` in the "Read First" section. Neither file exists. The actual files are `api/board.js` + `api/db.js` and `supabase/schema.sql`.
+
+**Fix:** CLAUDE.md updated to reference the correct paths. "Shared board flow" section clarified: `api/board.js` is the Vercel handler, `api/db.js` is the Supabase wrapper.
 
 ## Main User Experience
 
@@ -405,25 +459,34 @@ Main responsibilities:
 1. Read secrets from GitHub Actions environment.
 2. Exchange Google refresh token for OAuth access token.
 3. Fetch CoinLyte channel RSS uploads.
-4. Fetch competitor RSS uploads:
-   - Coin Bureau official channel.
-   - Cyber Scrilla.
-   - Bankless.
-5. Fetch recent comments when scopes allow it.
-6. Fetch YouTube Analytics reports.
-7. Fetch crypto/news RSS feeds.
-8. Split news into India, regulation, and market/global groups, then build the separate Coin Stats top-30 momentum group.
-9. Build market intelligence and the embedded source radar inputs.
-10. Read shared board memory from Supabase when Supabase secrets are present.
-11. Build a blocked-topic list from active planner cards, saved radar, dismissed ideas, and recent CoinLyte uploads.
-12. Call Claude with channel, audience, comment, competitor, analytics, news context, and blocked-topic memory. Claude is asked for 20 candidates so the app can keep the strongest 15 after filtering.
-13. Run a post-Claude duplicate filter so repeated/dismissed/planned topics and source-overloaded clusters are dropped before writing live data.
-14. Write `assets/live-data.js`.
+4. Fetch competitor RSS uploads: Coin Bureau, Cyber Scrilla, Bankless.
+5. Fetch recent comments when scopes allow it. Filter scam/spam using two layers:
+   - `SCAM_WORDS` list (WhatsApp, Telegram, guaranteed profit, threw it into, boring stock, stock profit, etc.)
+   - `SCAM_AUTHOR_PREFIXES` list (oliv)
+   - `SCAM_TEXT_PATTERNS` regex list (phone numbers, contact-me patterns, `!!TICKER!!` pump spam)
+6. Fetch YouTube Analytics reports (p28, p90, p365, topVideos, geo, device, traffic).
+7. Fetch crypto/news RSS feeds — split into India, regulation, market, and global groups.
+8. Build Coin Stats: fetch top-30 CoinGecko coins by market cap, rank by momentum score (abs(24h)×2 + abs(7d) + volume/1B capped at 20), fetch Google News per top-10 coin, write to `news.coins`. Items without valid CoinGecko price data should never appear in `news.coins`.
+9. Build video performance from `topVideos` Analytics rows directly (NOT from RSS cross-reference). Resolve titles via `video_titles` dict. Calculate `pctOfAvg` against the 90-day view baseline.
+10. Read shared board memory from Supabase when secrets are present.
+11. Build blocked-topic list from active planner cards, saved radar, dismissed ideas, and recent uploads.
+12. Call Claude API with full context. The prompt includes:
+    - Channel identity and zero-tolerance rules (no FOMO, no price prediction, no 10X language)
+    - Evergreen content angles: Security, SIP & Long-Term Investing, Tax & Compliance, Passive Income, Coin Analysis (5-year narrative frame), India Specific
+    - Narrative mining framework for coin signals: price move → find catalyst → explain sector story
+    - Hard minimums: MIN 2 Security, MIN 1 Tax & Compliance, MIN 1 SIP/Long-Term Investing per refresh
+    - Coin momentum cap: MAX 3 ideas from Coin Momentum source
+    - Urgency definition: 4+ urgent ideas covering India breaking news, security threats, tax news, community spikes
+    - Priority distribution: 4 urgent + 7 high + 9 medium
+    - Source group caps and community comment minimums
+    Claude generates 20 candidates; the app keeps the strongest 15 after duplicate filtering.
+13. Run post-Claude duplicate filter (62% topic token overlap threshold). Drop ideas matching blocked topics.
+14. Write `assets/live-data.js` (exposes `window.COINLYTE_LIVE_DATA`).
 15. Write `assets/refresh-status.json`.
 
-This board-memory step is important. If Kirtish dismisses an idea, saves a radar source, adds a topic into Planner, or already publishes a similar video, future refreshes should avoid recreating that same concept with slightly different wording. The refresh script also caps source overload so one news event does not create a full board of near-identical video ideas.
+The board-memory step is critical. Topics already planned, saved, dismissed, or recently published are treated as blocked so they do not regenerate with slightly different wording after each refresh.
 
-If YouTube comment fetching fails with insufficient scopes, the rest of refresh can still complete. To fix comments properly, regenerate the Google refresh token with the required YouTube scopes.
+If YouTube comment fetching fails with insufficient scopes, the rest of refresh still completes. To fix comments properly, regenerate the Google OAuth refresh token with the required YouTube scopes.
 
 ## Board Sync Responsibilities
 
@@ -669,11 +732,16 @@ Then browser-test:
 - Do not turn Sync Board into a full YouTube/news/Claude refresh.
 - Source links must open in a new tab.
 - Planner cards created from intelligence must keep source link and research brief.
-- Market Intel Source Radar must remain source-first and scannable. It can save for future review or add directly to Planner, but it should not become another heavy idea board unless explicitly redesigned.
-- Coin Stats / Top 30 Coin Momentum must stay tied to top-market-cap coins and the 7-day source window. Do not reintroduce broad old hot-news exceptions unless Kirtish explicitly asks.
+- Market Intel Source Radar must remain source-first and scannable.
+- Coin Stats must stay tied to top-market-cap coins and the 7-day source window. Items without `change_24h` data (old-format hot news entries) must be filtered out and never shown as coin momentum cards.
+- Coin Stats and Market Intel must remain separate tabs with separate data.
+- Video Ideas coin momentum ideas must explain the narrative/catalyst behind the price move — never raw price prediction, FOMO language, or "buy now" framing. The `visibleIdeas()` cap of 3 coin momentum ideas must remain.
 - Refresh idea generation must use board memory. Do not remove the Supabase memory read, blocked-topic prompt section, or post-Claude duplicate filter.
+- The Claude prompt must always include: zero-tolerance FOMO rules, evergreen angles (Security, Tax & Compliance, SIP & Investing, Passive Income), narrative mining for coin signals, minimum floor requirements, and urgency definition covering at least 4 urgent ideas per refresh.
+- Video performance must be built from `topVideos` rows — never from RSS cross-reference.
+- Scam filter in `refresh.py` must include: SCAM_WORDS, SCAM_AUTHOR_PREFIXES, SCAM_TEXT_PATTERNS including the `!!TICKER!!` regex.
 - Team access changes must be checked server-side, not only hidden in the UI.
-- Team access codes must remain hashed.
+- Team access codes must remain hashed (PBKDF2).
 - Keep backup/import flows working before large UI changes.
 - Keep the Claude-inspired visual direction: premium cards, color-coded boards, compact scan-friendly sections, and operational clarity.
 

@@ -4,15 +4,19 @@ Use this checklist before pushing or deploying.
 
 ## Latest Handover QA Pass
 
-Last full local handover QA: May 29, 2026.
+Last full QA: May 31, 2026.
 
 Verified in this pass:
 
 - JavaScript syntax for the frontend and all Vercel API routes.
 - Python syntax for `.github/scripts/refresh.py`.
-- Static smoke suite with security, refresh, Supabase, notification, planner, saved radar, duplicate-filter, scam-filter, and Top 30 Coin Momentum guards.
+- Static smoke suite: security, refresh, Supabase, notification, planner, saved radar, duplicate-filter, scam-filter, and Top 30 Coin Momentum guards.
 - Auth helpers: signed session cookie round trip, team access-code hash verification, and wrong-code rejection.
 - Browser smoke: login screen, all top-level nav areas, Channel Intelligence subtabs, Content Planner board/calendar/saved radar, planner modal structure, Brand Deals board/modal, Team Access modal, Refresh screen, and notification drawer.
+- Coin Stats tab: confirmed no ghost items appear when live-data has no valid coin momentum data (change_24h null check working).
+- Video performance: confirmed real view counts from topVideos rows appear in Analytics tab.
+- Video Ideas: confirmed coin momentum ideas capped at 3, urgent section populates correctly, narrative-mined coin ideas show catalyst/sector context not price prediction.
+- Scam filter: confirmed `!!TICKER!!` pump spam and "boring stock / threw it into" vocabulary blocked from Community Pulse.
 
 ## Automated
 
@@ -59,13 +63,16 @@ npm test
 ## Intelligence
 
 - Market Intel shows India policy, US regulation, global market, and embedded Source Radar sections.
-- Coin Stats is the separate top-30 coin momentum tab. It uses CoinGecko top-market-cap movers plus fresh 7-day Google News sources.
+- Coin Stats is the separate top-30 coin momentum tab. It uses CoinGecko top-market-cap movers plus fresh 7-day Google News sources. Coins with null `change_24h` (old-format ghost entries) must not appear.
 - Source Radar shows source-only cards inside Market Intel with source, save, add-planner, and dismiss actions.
 - Saved Source Radar links appear under Content Planner -> Saved Radar and survive Sync Planner.
 - Competitor Intel shows competitor videos and generated CoinLyte-fit ideas.
 - Community Pulse shows comment-led video ideas before raw top comments.
-- Video Ideas should remain the final combined shortlist across Market Intel, Coin Stats, Competitor Intel, Community Pulse, analytics, saved radar, dismissed ideas, existing planner cards, and recent uploads.
-- Community Pulse excludes obvious scam/reply-farm comments, including fake author names that start with `Oliv`, contact-me bait, Telegram/WhatsApp bait, and phone-number spam.
+- Community Pulse excludes obvious scam/reply-farm comments, including fake author names that start with `Oliv`, contact-me bait, Telegram/WhatsApp bait, phone-number spam, and `!!TICKER!!` style pump spam.
+- Video Ideas is the final combined shortlist across Market Intel, Coin Stats, Competitor Intel, Community Pulse, analytics, saved radar, dismissed ideas, existing planner cards, and recent uploads.
+- Video Ideas urgent section must show at least some ideas on a normal refresh — if it is empty, check that the Claude prompt urgency definition is not too narrow.
+- Video Ideas coin momentum ideas: must show no more than 3 in the visible list. Each coin idea must explain the narrative/catalyst behind the price move — not raw price prediction or FOMO language.
+- Video Ideas categories include: Security, India Focus, Policy, Tax & Compliance, Education, DeFi, Comparison, SIP & Investing, Passive Income, Coin Analysis, Breaking, Strategy.
 - Add-to-Planner removes the idea from the loose idea list.
 - Dismiss hides the idea/card.
 
@@ -87,6 +94,12 @@ npm test
 - Saved Radar source buttons open in a new tab.
 - Moving stages creates notifications for assigned team members.
 - Sync Planner pulls shared board changes without triggering the live-data refresh workflow.
+
+## Analytics
+
+- Analytics tab shows channel stats, geographic breakdown, device split, traffic sources.
+- Video performance section shows real view counts and watch percentage for top historical videos (not all zeros).
+- If view counts are all zero, the topVideos Analytics data is not mapping correctly — check `video_performance` in live-data.js.
 
 ## Brand Deals
 
@@ -123,3 +136,26 @@ npm test
 - Refresh button calls the backend on deployed Vercel.
 - Status can be checked after a refresh starts.
 - Missing backend configuration is shown as an error, not a blank page.
+- After a successful refresh, Coin Stats shows coins with real price data (change_24h, rank, volume).
+- After a successful refresh, Video Ideas shows ideas across multiple categories including Security, Tax & Compliance, SIP & Investing, and Passive Income — not only coin/market ideas.
+- After a successful refresh, Community Pulse comment themes show topic names (not blank labels).
+
+## Scam Filter Verification
+
+These comment patterns must NOT appear in the Community Pulse feed after a refresh:
+
+- Any comment containing `!!WORD!!` (double exclamation ticker spam)
+- Any comment containing "threw it into", "boring stock profit", or "stock profit"
+- Any comment from an author whose name starts with `Oliv`
+- Any comment containing WhatsApp, Telegram, or phone number bait
+- Any comment with "guaranteed profit" or "contact me"
+
+## Video Ideas Quality Check
+
+After a fresh refresh, open Video Ideas and verify:
+
+- Urgent section: at least 2-4 ideas visible. If empty, urgency definition is too narrow.
+- Coin momentum ideas: at most 3 visible. Each must explain a narrative or sector story — not "buy X" or "X will 10x".
+- Tax & Compliance: at least 1 idea mentioning ITR, TDS, capital gains, or 30% tax.
+- Security: at least 2 ideas about wallets, scams, or exchange safety.
+- No FOMO language in any title (10X, 100X, pump, breakout, moon, buy now).
