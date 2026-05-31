@@ -841,6 +841,23 @@ if ANTHROPIC_KEY:
 
     prompt = f"""You are the world's best YouTube content strategist for CoinLyte — India's Hindi crypto education channel.
 
+═══ CHANNEL IDENTITY (read this first — it governs every decision) ═══
+CoinLyte is an EDUCATION channel, not a trading signals or price-prediction channel.
+Format hierarchy (highest success rate first):
+  1. Explained / What-is guides ("XRP Explained", "What is Ethereum Staking?")
+  2. Safety & Security guides ("Cold Wallet Setup", "How to spot crypto scams")
+  3. Comparison videos ("Bitcoin vs Ethereum 2026", "Exchange A vs Exchange B")
+  4. India regulation / policy news (SEBI, RBI, tax, Parliament decisions)
+  5. Community Q&A based on real viewer questions
+  6. Coin spotlight — educational take on a single coin (NOT price prediction)
+
+AVOID these formats — they underperform on this channel:
+  ✗ Pure price prediction ("Will BNB hit $750?")
+  ✗ Technical chart analysis (RSI, support levels, TA)
+  ✗ "10X by 2026" speculation without educational depth
+  ✗ Day-trading or short-term buy/sell signals
+  When given a coin momentum signal, ALWAYS reframe it as: "Coin Explained + India investor risk/opportunity"
+
 ═══ CHANNEL INTELLIGENCE ═══
 Subscribers: {subs:,} | Total views (90d): {analytics.get('p90',{}).get('core',{}).get('rows',[[0]])[0][0] if analytics.get('p90',{}).get('core',{}).get('rows') else 'N/A'}
 Geography: {geo_str}
@@ -865,7 +882,7 @@ These topics are already in the planner, saved for later, previously dismissed, 
 ═══ AUDIENCE VOICE — Top {len(all_comments)} comments (sorted by engagement) ═══
 {comment_samples_str}
 
-Top recurring comment themes:
+Top recurring comment themes (these represent real viewer demand — always include at least 3 ideas from here):
 {chr(10).join(f'- {r}' for r in top_requests) if top_requests else '- No comment data yet'}
 
 ═══ COMPETITOR CONTENT THIS WEEK ═══
@@ -876,29 +893,45 @@ Cyber Scrilla (English, hardware wallet focus, 500K subs):
 {chr(10).join(f'- {t}' for t in cs_titles) if cs_titles else '- RSS data unavailable'}
 
 ═══ BREAKING NEWS SIGNALS ═══
-India crypto news:
+India crypto news (highest priority for urgent — directly affects Indian holders):
 {chr(10).join(f'- {t}' for t in india_hdls) if india_hdls else '- No live news'}
 
-US regulation (GENIUS Act / Clarity Act):
+US/global regulation (GENIUS Act / Clarity Act / SEC):
 {chr(10).join(f'- {t}' for t in reg_hdls) if reg_hdls else '- No live news'}
 
-Global market (Bitcoin / Ethereum / XRP):
+Global market (Bitcoin / Ethereum / macro):
 {chr(10).join(f'- {t}' for t in mkt_hdls) if mkt_hdls else '- No live news'}
 
-Top 30 coin momentum radar (CoinGecko market-cap top 30 + 7-day news only):
+Top 30 coin momentum radar — USE SPARINGLY (max 2 ideas total from this section, max priority = HIGH):
+These are CoinGecko top-30 market-cap coins with recent movement. Reframe ALL coin momentum signals as
+educational "Explained" or "Risk for Indian investors" content — never pure price prediction.
+Only use coins that are recognisable to Indian retail investors (BTC, ETH, XRP, BNB, SOL, ADA, HYPE, TON).
+Skip low-name-recognition coins (ZEC, XMR, BCH, RAIN, LEO, WBT) unless the India angle is exceptional.
 {chr(10).join(f'- {t}' for t in coin_hdls) if coin_hdls else '- No top-30 coin momentum news this refresh'}
 
 ═══ YOUR TASK ═══
-Generate exactly 20 candidate video ideas for CoinLyte. The app will keep the best non-duplicate 15 after memory filtering. Rules:
-1. NEVER duplicate a recent upload topic
-2. NEVER recreate a topic already in Shared Board Memory, even if the wording changes
-3. Do not make 10 ideas from one news item. Maximum 2 ideas per event cluster and maximum 4 per source group.
-4. For underperforming videos, suggest a PIVOT only when the title is genuinely different from the original
-5. Always add India angle: ₹ amounts, Indian exchange names, India regulation, "Indian investor" framing
-6. Mix formats that historically perform: Comparison > Explained > Security Guide > News reaction > Prediction
-7. Mobile-first titles: punchy, emoji, fear hook OR curiosity hook, under 70 chars
+Generate exactly 20 candidate video ideas for CoinLyte. The app will keep the best non-duplicate 15 after memory filtering.
 
-Priority distribution for candidates: 5 urgent (news-driven, post this week) + 8 high (competitor gaps) + 7 medium (evergreen/community asks)
+HARD RULES — violation means the idea is wasted:
+1. NEVER duplicate a recent upload topic
+2. NEVER recreate a topic already in Shared Board Memory, even if wording changes
+3. MAX 2 ideas from Coin Momentum source, MAX priority HIGH (never urgent for coin price moves)
+4. MAX 2 ideas per event cluster, MAX 4 per source group (India News, Regulation, Market, Competitors)
+5. MIN 3 ideas must come from Community Comments (real viewer demand always gets a slot)
+6. MIN 2 ideas must be Safety/Security format (this channel's highest-performing category)
+7. For underperforming videos, suggest a PIVOT only when the title is genuinely different
+8. Always add India angle: ₹ amounts, CoinDCX/WazirX/Binance India context, SEBI/RBI reference
+9. Mobile-first titles: punchy, emoji, under 75 chars, fear OR curiosity hook
+10. No pure price prediction — transform all coin signals into educational/safety angles
+
+WHAT COUNTS AS URGENT (only these — do not mark anything else urgent):
+  ✓ India government/SEBI/RBI action directly changing what Indian holders can do with crypto THIS WEEK
+  ✓ Security breach or scam actively targeting Indian crypto users right now
+  ✓ Major Indian exchange (CoinDCX, WazirX, Binance India) listing/delisting/outage/hack
+  ✓ Indian Parliament crypto legislation that passed or is voting this week
+  ✗ NOT urgent: coin price moves (even +10%), US regulatory news, global market dips, DeFi protocol news
+
+PRIORITY DISTRIBUTION: 3 urgent (India-specific breaking ONLY) + 7 high (competitor gaps + audience asks + India news) + 10 medium (education + comparison + coin explained + community Q&A + evergreen)
 
 Sources for each idea MUST be one of: "Coin Bureau", "Cyber Scrilla", "India News", "Regulation News", "Market News", "Coin Momentum", "Community Comments", "Analytics Data", "Topic Pivot"
 
@@ -907,7 +940,7 @@ For each idea return a JSON object with EXACTLY these fields:
 - "priority": "urgent" | "high" | "medium"
 - "category": Security | India Focus | Policy | Macro | Education | DeFi | Comparison | Breaking | XRP | Bitcoin | Stablecoin | Strategy
 - "signal": competitor_gap | news_trend | audience_ask | analytics_insight | topic_pivot
-- "why": 1-2 sentences — specific India angle + performance prediction based on channel data
+- "why": 1-2 sentences — specific India angle + why this format works for this channel's audience
 - "source": exact source name from the list above
 
 Return ONLY a valid JSON array of 20 objects. Zero markdown, zero explanation."""

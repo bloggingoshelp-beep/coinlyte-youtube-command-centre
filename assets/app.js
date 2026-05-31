@@ -686,7 +686,18 @@
   function visibleIdeas() {
     const dismissed = new Set(state.dismissedIdeas);
     const planned = new Set(state.pipeline.map((card) => String(card.title || "").toLowerCase()));
-    return data.ideas.filter((idea) => !dismissed.has(ideaKey(idea)) && !planned.has(String(idea.title || "").toLowerCase()) && !isHandledIdea(idea));
+    const filtered = data.ideas.filter((idea) => !dismissed.has(ideaKey(idea)) && !planned.has(String(idea.title || "").toLowerCase()) && !isHandledIdea(idea));
+    // Cap coin momentum ideas at 2 in the final visible list — they feed Coin Stats directly
+    // and should not saturate Video Ideas with price-move signals.
+    let coinMomentumCount = 0;
+    return filtered.filter((idea) => {
+      const isCoinMomentum = idea.signal === "coin_momentum" || idea.source === "Coin Momentum";
+      if (isCoinMomentum) {
+        coinMomentumCount++;
+        return coinMomentumCount <= 2;
+      }
+      return true;
+    });
   }
   function isPlannedIdea(idea) {
     return state.pipeline.some((card) => String(card.title || "").toLowerCase() === String(idea.title || "").toLowerCase()) || isHandledIdea(idea);
