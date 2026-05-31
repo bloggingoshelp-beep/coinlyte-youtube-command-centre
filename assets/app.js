@@ -730,7 +730,11 @@
     if (text.includes("competitor")) return "🎯";
     if (text.includes("community") || text.includes("audience") || text.includes("comment")) return "💬";
     if (text.includes("security") || text.includes("wallet") || text.includes("scam")) return "🔐";
-    if (text.includes("india") || text.includes("tax") || text.includes("rbi")) return "🇮🇳";
+    if (text.includes("tax") || text.includes("compliance") || text.includes("itr") || text.includes("tds")) return "🧾";
+    if (text.includes("sip") || text.includes("investing") || text.includes("dca") || text.includes("portfolio")) return "📈";
+    if (text.includes("passive") || text.includes("staking") || text.includes("yield")) return "💡";
+    if (text.includes("coin analysis") || text.includes("coin anal")) return "🪙";
+    if (text.includes("india") || text.includes("rbi") || text.includes("sebi")) return "🇮🇳";
     if (text.includes("policy") || text.includes("regulation")) return "🧾";
     if (text.includes("stable")) return "💵";
     if (text.includes("ai")) return "🤖";

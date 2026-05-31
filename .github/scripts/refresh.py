@@ -839,24 +839,51 @@ if ANTHROPIC_KEY:
         top_comment_samples.append(f"  [{c['intent']}] {c['text'][:150]}")
     comment_samples_str = '\n'.join(top_comment_samples[:15]) if top_comment_samples else '  No comments fetched yet'
 
-    prompt = f"""You are the world's best YouTube content strategist for CoinLyte — India's Hindi crypto education channel.
+    prompt = f"""You are the content strategist for CoinLyte — India's Hindi crypto education channel.
 
-═══ CHANNEL IDENTITY (read this first — it governs every decision) ═══
-CoinLyte is an EDUCATION channel, not a trading signals or price-prediction channel.
-Format hierarchy (highest success rate first):
-  1. Explained / What-is guides ("XRP Explained", "What is Ethereum Staking?")
-  2. Safety & Security guides ("Cold Wallet Setup", "How to spot crypto scams")
-  3. Comparison videos ("Bitcoin vs Ethereum 2026", "Exchange A vs Exchange B")
-  4. India regulation / policy news (SEBI, RBI, tax, Parliament decisions)
-  5. Community Q&A based on real viewer questions
-  6. Coin spotlight — educational take on a single coin (NOT price prediction)
+═══ MISSION & IDENTITY — memorise before generating anything ═══
+Mission: "Learn Crypto. Grow Your Wealth. Invest Smartly. Secure Long-Term. Consistently Optimize."
+Audience: Indian retail investors, 25-40 years old, long-term mindset, overwhelmed by crypto noise.
+Trust model: CoinLyte's credibility is built on NEVER promoting trading, leverage, or get-rich-quick content.
 
-AVOID these formats — they underperform on this channel:
-  ✗ Pure price prediction ("Will BNB hit $750?")
-  ✗ Technical chart analysis (RSI, support levels, TA)
-  ✗ "10X by 2026" speculation without educational depth
-  ✗ Day-trading or short-term buy/sell signals
-  When given a coin momentum signal, ALWAYS reframe it as: "Coin Explained + India investor risk/opportunity"
+CoinLyte IS: education, security, long-term strategy, honest product reviews, India-specific guidance.
+CoinLyte IS NOT: a trading channel, a price signal service, a FOMO machine, an affiliate farm.
+
+ZERO TOLERANCE rules — violating these makes an idea worthless:
+  ✗ NEVER use: 10X, 20X, 100X, pump, moon, skyrocket, breakout, "buy now", "sell now"
+  ✗ NEVER give price targets: "Bitcoin ₹75L तक जाएगा", "Will X hit $Y?"
+  ✗ NEVER trading signals, leverage, or futures content — ever
+  ✗ NEVER "100x gem" or "best coin to buy" speculative framing
+  ✗ If these words appear in your output, the idea is automatically rejected
+
+═══ EVERGREEN CONTENT ANGLES — always keep these in mind ═══
+Beyond breaking news, this channel's audience consistently searches for and rewards these topics.
+When any news signal or comment touches one of these areas, use it as a hook to generate that idea:
+
+  🔐 Security & Wallets — highest performing category. Always include 2-3 security ideas.
+     Cold wallet setup, self-custody guide, scam alert, exchange safety comparison
+     Examples: "Tangem vs Ledger vs Keystone 2026", "5 Crypto Scams जो India में Active हैं"
+
+  💰 SIP & Long-Term Portfolio — bread and butter for India's 25-40 long-term investors
+     Crypto SIP strategy, DCA in bear market, portfolio rebalancing, 5-year coin holds
+     Examples: "₹5K/month Crypto SIP कैसे शुरू करें?", "Bear Market में क्या करना चाहिए?"
+
+  🧾 Tax & Compliance — Indians actively search for this every month, not just tax season
+     30% crypto tax, TDS under Section 194S, ITR filing, capital gains calculation, VDA rules
+     Examples: "Crypto ITR 2026 कैसे File करें?", "₹1 लाख Crypto Profit पर कितना Tax?"
+
+  💡 Passive Income without Trading — staking, yield, lending for long-term holders
+     Ethereum staking from India, stable yield platforms, DeFi for patient investors
+     Examples: "Ethereum Staking से ₹50K Monthly — India से कैसे करें?", "Safe Crypto Yield 2026"
+
+  🪙 Coin Narrative (5-year frame) — use price moves as signals, explain the underlying story
+     "Is this coin worth holding for 5 years?" not "Will it 10x?"
+     Price move → find catalyst → explain sector narrative → India investor angle
+     Examples: "Hyperliquid: DEX का Future या Hype?", "RAIN Token क्यों बढ़ रहा है? Prediction Market War"
+
+  🇮🇳 India Specific — exchange guides, UPI crypto, SEBI/RBI, India tax, INR context
+     Exchange comparisons, how to buy with UPI, regulatory explainers, India-only tips
+     Examples: "CoinDCX vs WazirX vs Binance India: कौन Better?", "SEBI का Crypto Rule 2026"
 
 ═══ CHANNEL INTELLIGENCE ═══
 Subscribers: {subs:,} | Total views (90d): {analytics.get('p90',{}).get('core',{}).get('rows',[[0]])[0][0] if analytics.get('p90',{}).get('core',{}).get('rows') else 'N/A'}
@@ -937,37 +964,37 @@ RULES for coin narrative ideas:
 {chr(10).join(f'- {t}' for t in coin_hdls) if coin_hdls else '- No top-30 coin momentum news this refresh'}
 
 ═══ YOUR TASK ═══
-Generate exactly 20 candidate video ideas for CoinLyte. The app will keep the best non-duplicate 15 after memory filtering.
+Generate exactly 20 candidate video ideas for CoinLyte. The app keeps the best non-duplicate 15 after memory filtering.
 
-HARD RULES — violation means the idea is wasted:
-1. NEVER duplicate a recent upload topic
-2. NEVER recreate a topic already in Shared Board Memory, even if wording changes
-3. MAX 3 ideas from Coin Momentum source. Priority = HIGH for fresh narratives, MEDIUM for ongoing sector stories, URGENT only if India-regulation-linked. NEVER urgent for price move alone.
-4. MAX 2 ideas per event cluster, MAX 4 per source group (India News, Regulation, Market, Competitors)
-5. MIN 3 ideas must come from Community Comments (real viewer demand always gets a slot)
-6. MIN 2 ideas must be Safety/Security format (this channel's highest-performing category)
-7. For underperforming videos, suggest a PIVOT only when the title is genuinely different
-8. Always add India angle: ₹ amounts, CoinDCX/WazirX/Binance India context, SEBI/RBI reference
-9. Mobile-first titles: punchy, emoji, under 75 chars, fear OR curiosity hook
-10. No pure price prediction — transform all coin signals into educational/safety angles
+HARD RULES:
+1. NEVER duplicate a recent upload or Shared Board Memory topic
+2. MAX 3 ideas from Coin Momentum — use price move as signal, explain the narrative, 5-year frame
+3. MAX 2 ideas per news event cluster, MAX 4 per source group
+4. MIN 3 ideas from Community Comments — real viewer demand always gets answered
+5. MIN 2 Security ideas every refresh — highest converting category on this channel
+6. MIN 1 Tax & Compliance idea — Indians search for this constantly; tie to any current news hook
+7. MIN 1 SIP or Long-Term Investing idea — core audience identity
+8. Always add India angle: ₹ amounts, CoinDCX/WazirX/Binance India, SEBI/RBI, Indian context
+9. Mobile-first titles: emoji + curiosity or fear hook, under 75 chars, Hindi/English mix
+10. ZERO FOMO language in any title — no 10X, breakout, pump, buy now, price targets
 
-WHAT COUNTS AS URGENT — must always generate at least 4 urgent ideas every refresh:
-  ✓ India government/SEBI/RBI/Parliament action directly affecting Indian crypto holders
-  ✓ Breaking global crypto news with clear India investor impact (stablecoin freeze, exchange collapse)
-  ✓ Security breach, scam wave, or hack that Indian users need to know about this week
-  ✓ Regulation news (US/global) that will change how Indians can buy/hold/tax crypto
-  ✓ Audience questions that have spiked — topics 20+ viewers asked in the same week
-  ✓ Major market event that Indian investors are actively searching RIGHT NOW (BTC at key level, ETH move)
-  ✗ NOT urgent: coin price move alone with no India story, evergreen education that can wait, DeFi protocol launches with no India angle
+URGENCY — must generate at least 4 urgent ideas every refresh:
+  URGENT = post within 3 days, time-sensitive for Indian investors:
+    ✓ SEBI/RBI/Parliament action directly affecting Indian crypto holders
+    ✓ Security breach or scam wave hitting Indian users right now
+    ✓ Tax deadline, new compliance rule, or ITR-related news
+    ✓ Breaking global news that changes what Indians can do with crypto this week
+    ✓ Community question spike — multiple viewers asked the same thing this week
+  NOT URGENT: coin price move alone, evergreen how-to, DeFi news with no India angle
 
-PRIORITY DISTRIBUTION: 4 urgent (time-sensitive, post within 3 days) + 7 high (strong, plan this month) + 9 medium (evergreen queue)
+PRIORITY DISTRIBUTION: 4 urgent + 7 high + 9 medium
 
 Sources for each idea MUST be one of: "Coin Bureau", "Cyber Scrilla", "India News", "Regulation News", "Market News", "Coin Momentum", "Community Comments", "Analytics Data", "Topic Pivot"
 
 For each idea return a JSON object with EXACTLY these fields:
-- "title": Hindi/English mix, emoji, India angle, ₹ or % when possible (max 80 chars)
+- "title": Hindi/English mix, emoji, India angle, ₹ or % when possible (max 80 chars). Zero FOMO language.
 - "priority": "urgent" | "high" | "medium"
-- "category": Security | India Focus | Policy | Macro | Education | DeFi | Comparison | Breaking | XRP | Bitcoin | Stablecoin | Strategy
+- "category": Security | India Focus | Policy | Tax & Compliance | Education | DeFi | Comparison | SIP & Investing | Passive Income | Coin Analysis | Breaking | Strategy
 - "signal": competitor_gap | news_trend | audience_ask | analytics_insight | topic_pivot
 - "why": 1-2 sentences — specific India angle + why this format works for this channel's audience
 - "source": exact source name from the list above
